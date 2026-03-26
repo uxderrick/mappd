@@ -20,6 +20,13 @@
 
 <!-- Newest entries at the top -->
 
+### [2026-03-26] Routing landscape research — multi-framework support planning
+**What was done:** Comprehensive research of 12 frontend routing frameworks. Evaluated each by npm downloads, routing type (file/config/code), parsing difficulty, and priority. Covered: React Router v7 (Remix merge), Vue Router, Nuxt, Angular Router, SvelteKit, TanStack Router, Expo Router, Astro, SolidStart, Gatsby, Wouter, Inertia.js. Also identified cross-cutting patterns (dynamic segments, middleware, redirects, API routes, layout nesting) that apply across all frameworks.
+**Why:** FlowCanvas currently only supports React Router v6+ and Next.js. To be a viable tool for the broader frontend ecosystem, we need a prioritized roadmap for adding framework support.
+**Trade-offs:** Could have started implementing immediately with Vue (second-largest framework). Instead invested in research first to design the parser architecture around three strategies (filesystem, config-array, code/JSX) rather than building one-off parsers per framework. This front-loaded effort should make each subsequent framework faster to add.
+**Outcome:** Prioritized 4-phase roadmap added to todo.md. Key insight: all routers map to 3 parsing strategies, not 12 separate implementations. P1 targets: React Router v7 full, Vue Router + Nuxt, Angular. P2: SvelteKit, TanStack, Expo, Astro.
+**Related:** todo.md → Multi-Framework Router Support, learnings.md → three parsing strategies
+
 ### [2026-03-24] UI redesign — Figma-inspired design system
 **What was done:** Complete visual overhaul of the canvas UI. Researched Figma's design system (colors, typography, spacing, frame rendering). Applied: (1) Neutral dark gray canvas (#1e1e1e) replacing navy. (2) Floating labels above nodes instead of dark header bars — nodes are now flat white rectangles with no chrome. (3) Figma blue (#0d99ff) replacing indigo as accent. (4) 11px Inter font replacing 12px monospace. (5) Connection handles and edge labels hidden until hover. (6) Subtler edges at 35% opacity, full on hover/active. (7) Compact 240px pin panel matching Figma's sidebar proportions. (8) All shadows removed from nodes — flat design.
 **Why:** The old UI felt like a developer tool. The new UI feels like a design tool. Figma's visual language is what developers already associate with "infinite canvas" — matching it reduces cognitive load.

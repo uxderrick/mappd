@@ -1,0 +1,12 @@
+{
+  "index": "/screenshots/index.png",
+  "login": "/screenshots/login.png",
+  "dashboard": "/screenshots/dashboard.png",
+  "dashboard-settings": "/screenshots/dashboard-settings.png",
+  "dashboard-users-id": "/screenshots/dashboard-users-id.png",
+  "dashboard-notifications": "/screenshots/dashboard-notifications.png",
+  "dashboard-profile": "/screenshots/dashboard-profile.png",
+  "dashboard-create-project": "/screenshots/dashboard-create-project.png",
+  "dashboard-analytics": "/screenshots/dashboard-analytics.png",
+  "": "/screenshots/.png"
+}

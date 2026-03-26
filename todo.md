@@ -44,7 +44,25 @@ Priorities: `P0` (critical/blocking), `P1` (important), `P2` (nice-to-have), `P3
 - [ ] **VS Code extension** — Canvas in a webview panel `[P2]` `[added: 2026-03-23]`
 - [ ] **Export canvas as image/PDF** `[P3]` `[added: 2026-03-23]`
 - [ ] **AI-assisted flow inference** `[P3]` `[added: 2026-03-23]`
-- [ ] **Multi-framework support** — Vue, Svelte `[P3]` `[added: 2026-03-23]`
+### Multi-Framework Router Support (researched 2026-03-26)
+
+**Phase 2 — P1 (highest adoption, biggest gaps)**
+- [ ] **React Router v7 full support** — `routes.ts` config, flat-routes filesystem, `<Form>`, `loader`/`action`, server `redirect()` `[P1]` `[added: 2026-03-26]`
+- [ ] **Vue Router** — Config-based `createRouter({ routes })`, `<router-link>`, `useRouter().push()`, navigation guards `[P1]` `[added: 2026-03-26]`
+- [ ] **Nuxt** — File-based `pages/` scanning, `[param]` segments, `navigateTo()`, `<NuxtLink>`, `middleware/` `[P1]` `[added: 2026-03-26]`
+- [ ] **Angular Router** — Config-based `Routes[]` arrays, `routerLink`, `Router.navigate()`, lazy `loadComponent`/`loadChildren` cross-file resolution `[P1]` `[added: 2026-03-26]`
+
+**Phase 3 — P2 (growing fast or low-effort)**
+- [ ] **SvelteKit** — File-based `src/routes/`, `+page.svelte`, `goto()`, plain `<a href>` detection `[P2]` `[added: 2026-03-26]`
+- [ ] **TanStack Router** — Code + file-based, `routeTree.gen.ts` auto-generated tree is parseable goldmine `[P2]` `[added: 2026-03-26]`
+- [ ] **Expo Router** — File-based `app/`, mirrors Next.js conventions, `_layout.tsx`, `<Tabs>`/`<Stack>` navigators `[P2]` `[added: 2026-03-26]`
+- [ ] **Astro** — File-based `src/pages/`, `.astro`/`.md`/`.mdx` files, `getStaticPaths()`, plain `<a>` links `[P2]` `[added: 2026-03-26]`
+
+**Phase 4 — P3 (niche or declining)**
+- [ ] **SolidStart** — File-based `src/routes/`, `<A href>`, JSX nearly identical to React `[P3]` `[added: 2026-03-26]`
+- [ ] **Gatsby** — File-based `src/pages/` + programmatic `createPages` in `gatsby-node.js` (hard to fully parse) `[P3]` `[added: 2026-03-26]`
+- [ ] **Wouter** — Lightweight React/Preact router, tiny API surface `[P3]` `[added: 2026-03-26]`
+- [ ] **Inertia.js** — Server-side routes (Laravel/Rails), client `<Link>`, `router.visit()` — hardest to parse `[P3]` `[added: 2026-03-26]`
 
 ---
 

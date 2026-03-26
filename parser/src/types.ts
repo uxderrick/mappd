@@ -53,13 +53,13 @@ export interface FlowGraph {
   edges: FlowEdge[];
   metadata: {
     projectName: string;
-    framework: 'react-router' | 'nextjs-app' | 'nextjs-pages';
+    framework: 'react-router' | 'react-router-v7' | 'nextjs-app' | 'nextjs-pages';
     generatedAt: string;
     mappdVersion: string;
   };
 }
 
-export type Framework = 'react-router' | 'nextjs-app' | 'nextjs-pages';
+export type Framework = 'react-router' | 'react-router-v7' | 'nextjs-app' | 'nextjs-pages';
 
 export interface FrameworkDetection {
   framework: Framework;

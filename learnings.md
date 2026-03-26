@@ -19,6 +19,28 @@
 
 <!-- Newest entries at the top -->
 
+### [2026-03-26] Frontend routing falls into three parsing strategies
+**Context:** Researched 12 routing frameworks to plan multi-framework support.
+**Learning:** All frontend routers fall into three categories that determine parsing strategy:
+1. **File-based** (Next.js, Nuxt, SvelteKit, Astro, Expo Router, SolidStart) — scan directories, map file conventions to routes. Easiest to parse. Each framework has its own file naming conventions (`+page.svelte`, `page.tsx`, `[param]`, `$param`) but the approach is identical.
+2. **Config-based** (Vue Router, Angular Router, React Router config mode) — AST-parse route definition arrays. Medium difficulty. Angular is hardest due to cross-file lazy imports (`loadChildren`/`loadComponent`).
+3. **Code-based** (React Router JSX, TanStack Router, Wouter) — AST-parse JSX or `createRoute()` chains. Most flexible but hardest to parse exhaustively.
+Many frameworks support multiple modes (React Router v7 has all three). The parser architecture should have a strategy per mode, not per framework.
+**Why it matters:** Building three parsing strategies (filesystem scanner, config array parser, JSX/code parser) covers all 12 frameworks. New frameworks just need a thin adapter mapping their conventions to one of these strategies.
+**Related:** todo.md → Multi-Framework Router Support, execution.md → Routing landscape research
+
+### [2026-03-26] Dynamic segment syntax varies but maps to the same concept
+**Context:** Each router uses different syntax for dynamic route segments.
+**Learning:** The mapping: `[param]` (Next, Nuxt, Svelte, Expo, Solid), `$param` (TanStack, Remix flat routes), `:param` (React Router, Vue Router, Angular config), `{param}` (Gatsby collection routes). Catch-all: `[...slug]`, `$` (Remix), `:rest*` (wouter), `**` (Angular). Route groups (pathless): `(group)` dirs in most file-based routers. All normalize to `:param` in FlowCanvas's internal graph representation.
+**Why it matters:** The parser output format is already correct (`:param` style). Each framework adapter just needs its own regex to detect and convert its syntax.
+**Related:** todo.md → Multi-Framework Router Support
+
+### [2026-03-26] TanStack Router's generated route tree is a parsing shortcut
+**Context:** Evaluating TanStack Router parsing difficulty.
+**Learning:** TanStack Router generates a `routeTree.gen.ts` file containing the complete route tree as a typed object. Parsing this generated file is trivial compared to tracing `createRoute()` chains across multiple files. Always check for generated/manifest files first — they're the easiest path to accurate route extraction.
+**Why it matters:** Other frameworks may have similar generated artifacts (e.g., Nuxt's `.nuxt/routes.mjs`, Gatsby's `.cache/data.json`). Check for generated outputs before building full AST parsers.
+**Related:** todo.md → TanStack Router
+
 ### [2026-03-23] Auth state should be global, not per-node
 **Context:** Initially built state pinning with auth as a per-node property (like URL params). Each node had its own auth config.
 **Learning:** Auth should be global — set once, applied to ALL screen nodes. This matches how real apps work (one session, one cookie, one JWT). Per-node auth forces the developer to configure 18 nodes separately, which defeats the purpose. URL params remain per-node because each `/users/:id` screen genuinely needs different values.

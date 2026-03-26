@@ -31,7 +31,10 @@ export async function devCommand(options: DevOptions) {
     process.exit(1);
   }
 
-  // Step 1: Parse the project
+  // Step 1: Wait for target dev server
+  await waitForDevServer(targetPort);
+
+  // Step 2: Parse the project
   console.log(pc.dim('  Parsing routes...'));
   const graph = parseAndWriteGraph(projectDir);
 
@@ -43,13 +46,13 @@ export async function devCommand(options: DevOptions) {
   }
   console.log('');
 
-  // Step 2: Start the canvas server
+  // Step 3: Start the canvas server
   const canvasDir = path.resolve(import.meta.dirname, '../../canvas-dist');
   const flowGraphDir = path.join(projectDir, '.mappd');
 
   const server = createServer({ port, flowGraphDir, canvasDir, targetPort });
 
-  // Step 3: Start file watcher
+  // Step 4: Start file watcher
   const watcher = startWatcher(projectDir, (changedFile) => {
     console.log(pc.dim(`  File changed: ${path.relative(projectDir, changedFile)}`));
     const updated = parseAndWriteGraph(projectDir);
@@ -69,7 +72,7 @@ export async function devCommand(options: DevOptions) {
   console.log(pc.dim('  Press Ctrl+C to stop'));
   console.log('');
 
-  // Step 4: Capture screenshots in background (doesn't block startup)
+  // Step 5: Capture screenshots in background (doesn't block startup)
   if (graph) {
     console.log(pc.dim('  Capturing screenshots...'));
     captureScreenshots(graph, {
@@ -91,4 +94,46 @@ export async function devCommand(options: DevOptions) {
     server.close();
     process.exit(0);
   });
+}
+
+/**
+ * Wait for the target dev server to be reachable.
+ * Polls every 2 seconds, up to 60 seconds.
+ */
+async function waitForDevServer(port: number): Promise<void> {
+  const maxWait = 60_000;
+  const interval = 2_000;
+  const start = Date.now();
+
+  // Quick check first
+  if (await isPortReachable(port)) return;
+
+  console.log(pc.yellow(`  Waiting for dev server on port ${port}...`));
+  console.log(pc.dim(`  Start your dev server in another terminal (e.g., npm run dev)`));
+  console.log('');
+
+  while (Date.now() - start < maxWait) {
+    await new Promise((r) => setTimeout(r, interval));
+    if (await isPortReachable(port)) {
+      console.log(pc.green(`  Dev server detected on port ${port}`));
+      console.log('');
+      return;
+    }
+  }
+
+  console.log(pc.yellow(`  Dev server not detected after ${maxWait / 1000}s — continuing anyway`));
+  console.log(pc.dim(`  Screenshots and live previews may not work until the server is running`));
+  console.log('');
+}
+
+async function isPortReachable(port: number): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2000);
+    const res = await fetch(`http://localhost:${port}/`, { signal: controller.signal });
+    clearTimeout(timeout);
+    return res.ok || res.status < 500;
+  } catch {
+    return false;
+  }
 }

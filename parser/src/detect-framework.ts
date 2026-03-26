@@ -27,20 +27,19 @@ export function detectFramework(projectDir: string): FrameworkDetection {
       const subDir = path.join(appsDir, entry.name);
       const result = tryDetectFramework(subDir);
       if (result) {
-        // Prefix entry points with the sub-app path
         return result;
       }
     }
   }
 
   throw new Error(
-    'Could not detect routing framework. Mappd supports React Router v6+ and Next.js.\n' +
+    'Could not detect routing framework. FlowCanvas supports React Router v6+/v7 and Next.js.\n' +
     'If this is a monorepo, make sure --dir points to the app directory (e.g., --dir apps/dashboard).'
   );
 }
 
 function tryDetectFramework(projectDir: string): FrameworkDetection | null {
-  // Check for Next.js
+  // Check for Next.js (all config variants including .ts)
   const nextConfigs = ['next.config.js', 'next.config.mjs', 'next.config.ts'];
   const isNextjs = nextConfigs.some((f) => fs.existsSync(path.join(projectDir, f)));
 
@@ -67,12 +66,39 @@ function tryDetectFramework(projectDir: string): FrameworkDetection | null {
     return null;
   }
 
-  // Check for React Router in package.json
+  // Check for React Router v7 framework mode (@react-router/dev + react-router.config.ts)
   const pkgPath = path.join(projectDir, 'package.json');
   if (fs.existsSync(pkgPath)) {
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
     const deps = { ...pkg.dependencies, ...pkg.devDependencies };
 
+    // v7 framework mode: uses @react-router/dev and has app/routes.ts
+    if (deps['@react-router/dev'] || deps['@react-router/node'] || deps['@react-router/cloudflare']) {
+      const routesTsFiles = ['app/routes.ts', 'app/routes.tsx', 'app/routes.js', 'src/routes.ts', 'src/routes.tsx'];
+      const routesTsPath = routesTsFiles.find((f) => fs.existsSync(path.join(projectDir, f)));
+      const configFiles = ['react-router.config.ts', 'react-router.config.js'];
+      const hasConfig = configFiles.some((f) => fs.existsSync(path.join(projectDir, f)));
+
+      if (routesTsPath || hasConfig) {
+        // Check if using flatRoutes (file-based) or manual routes.ts config
+        const entryPoints: string[] = [];
+        if (routesTsPath) {
+          entryPoints.push(path.join(projectDir, routesTsPath));
+        }
+        return { framework: 'react-router-v7', entryPoints };
+      }
+
+      // v7 with flat routes but no explicit routes.ts — check for app/routes/ directory
+      const hasRoutesDir = fs.existsSync(path.join(projectDir, 'app', 'routes'));
+      if (hasRoutesDir) {
+        return {
+          framework: 'react-router-v7',
+          entryPoints: [path.join(projectDir, 'app', 'routes')],
+        };
+      }
+    }
+
+    // v6/v7 SPA mode: uses react-router-dom or react-router directly
     if (deps['react-router-dom'] || deps['react-router']) {
       const entryPoints: string[] = [];
 
@@ -83,6 +109,7 @@ function tryDetectFramework(projectDir: string): FrameworkDetection | null {
           if (
             content.includes('createBrowserRouter') ||
             content.includes('createHashRouter') ||
+            content.includes('createMemoryRouter') ||
             content.includes('BrowserRouter') ||
             content.includes('<Route') ||
             content.includes('RouterProvider')
