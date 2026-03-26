@@ -1,0 +1,559 @@
+/* ============================================
+   FlowCanvas — Obsidian Instrument
+
+   Design direction: Linear meets tldraw.
+   Near-black canvas, muted lavender accent,
+   sharp geometric precision, monospace routes.
+   ============================================ */
+
+/* --- Design Tokens --- */
+:root {
+  --fc-bg-void: #09090b;
+  --fc-bg-canvas: #0c0c0e;
+  --fc-bg-surface: #141416;
+  --fc-bg-elevated: #1a1a1e;
+  --fc-bg-overlay: #222226;
+
+  --fc-text-primary: #e4e4e7;
+  --fc-text-secondary: #a1a1aa;
+  --fc-text-muted: #52525b;
+  --fc-text-ghost: #3f3f46;
+
+  --fc-accent: #a78bfa;
+  --fc-accent-dim: rgba(167, 139, 250, 0.15);
+  --fc-accent-glow: rgba(167, 139, 250, 0.08);
+
+  --fc-live: #34d399;
+  --fc-live-dim: rgba(52, 211, 153, 0.15);
+
+  --fc-pin: #fbbf24;
+  --fc-pin-dim: rgba(251, 191, 36, 0.15);
+
+  --fc-border: rgba(255, 255, 255, 0.06);
+  --fc-border-hover: rgba(255, 255, 255, 0.12);
+
+  --fc-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--fc-border);
+  --fc-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--fc-border);
+
+  --fc-radius: 3px;
+  --fc-radius-lg: 6px;
+
+  --fc-font: 'SF Mono', 'Cascadia Code', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  --fc-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+
+  --fc-transition: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- Reset --- */
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: var(--fc-font-sans);
+  background: var(--fc-bg-void);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* --- Canvas --- */
+.react-flow {
+  background: var(--fc-bg-canvas);
+}
+
+/* ============================================
+   Screen Nodes
+   ============================================ */
+
+.fc-node {
+  transition: transform var(--fc-transition);
+}
+
+/* Floating label — monospace route path */
+.fc-node-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 1px 5px 1px;
+  cursor: grab;
+  min-height: 18px;
+}
+
+.fc-node-label:active {
+  cursor: grabbing;
+}
+
+.fc-node-name {
+  font-family: var(--fc-font);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--fc-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: color var(--fc-transition);
+}
+
+.fc-node:hover .fc-node-name {
+  color: var(--fc-text-secondary);
+}
+
+.fc-node-name.selected {
+  color: var(--fc-accent);
+}
+
+.fc-node-actions {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  opacity: 0;
+  transition: opacity var(--fc-transition);
+}
+
+.fc-node:hover .fc-node-actions,
+.fc-node.is-active .fc-node-actions,
+.fc-node.is-live .fc-node-actions {
+  opacity: 1;
+}
+
+/* Action buttons */
+.fc-action-btn {
+  background: none;
+  border: none;
+  color: var(--fc-text-ghost);
+  cursor: pointer;
+  font-size: 11px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--fc-radius);
+  padding: 0;
+  transition: all var(--fc-transition);
+}
+
+.fc-action-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--fc-text-primary);
+}
+
+.fc-action-btn.is-pinned {
+  color: var(--fc-pin);
+}
+
+/* Indicator dots */
+.fc-pin-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--fc-pin);
+  flex-shrink: 0;
+}
+
+.fc-live-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--fc-live);
+  flex-shrink: 0;
+  margin-right: 2px;
+  box-shadow: 0 0 6px var(--fc-live-dim);
+}
+
+/* Screen content — sharp rectangle, thin border */
+.fc-node-screen {
+  background: #fafafa;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--fc-border);
+  border-radius: 1px;
+  transition: border-color var(--fc-transition);
+}
+
+.fc-node:hover .fc-node-screen {
+  border-color: var(--fc-border-hover);
+}
+
+/* Selection states */
+.fc-node.is-active .fc-node-screen {
+  border-color: var(--fc-accent);
+  box-shadow: 0 0 0 1px var(--fc-accent), 0 0 20px var(--fc-accent-glow);
+}
+
+.fc-node.is-live .fc-node-screen {
+  border-color: var(--fc-live);
+  box-shadow: 0 0 0 1px var(--fc-live), 0 0 12px var(--fc-live-dim);
+}
+
+.react-flow__node.selected .fc-node-screen {
+  border-color: var(--fc-accent);
+}
+
+/* Placeholder */
+.fc-node-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--fc-bg-surface);
+  gap: 6px;
+}
+
+.fc-placeholder-text {
+  font-family: var(--fc-font);
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--fc-text-ghost);
+  letter-spacing: -0.01em;
+}
+
+/* Loading */
+.fc-node-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--fc-bg-surface);
+}
+
+.fc-spinner {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--fc-bg-overlay);
+  border-top-color: var(--fc-accent);
+  border-radius: 50%;
+  animation: fc-spin 0.8s linear infinite;
+}
+
+@keyframes fc-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   Handles — hidden until hover
+   ============================================ */
+
+.fc-handle,
+.react-flow__handle {
+  background: var(--fc-accent);
+  width: 5px;
+  height: 5px;
+  border: 1.5px solid var(--fc-bg-canvas);
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity var(--fc-transition);
+}
+
+.fc-node:hover .fc-handle,
+.fc-node:hover .react-flow__handle,
+.fc-node.is-active .fc-handle,
+.fc-node.is-active .react-flow__handle {
+  opacity: 1;
+}
+
+/* ============================================
+   Edges — Ghostly lavender connections
+   ============================================ */
+
+.react-flow__edge-path {
+  stroke: var(--fc-accent);
+  stroke-width: 1;
+  opacity: 0.2;
+  transition: opacity var(--fc-transition), stroke-width var(--fc-transition);
+}
+
+.react-flow__edge:hover .react-flow__edge-path,
+.react-flow__edge.selected .react-flow__edge-path {
+  opacity: 0.8;
+  stroke-width: 1.5;
+}
+
+/* Active node edges — vivid */
+.react-flow__edge-path[style*="stroke: rgb(167, 139, 250)"] {
+  opacity: 0.7;
+}
+
+/* Edge labels — monospace pill */
+.react-flow__edge-textbg {
+  fill: var(--fc-bg-elevated);
+  rx: 4;
+  ry: 4;
+  stroke: var(--fc-border);
+  stroke-width: 0.5;
+}
+
+.react-flow__edge-text {
+  fill: var(--fc-text-muted);
+  font-size: 8px;
+  font-family: var(--fc-font);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.react-flow__edge:hover .react-flow__edge-textbg {
+  fill: var(--fc-bg-overlay);
+  stroke: var(--fc-border-hover);
+}
+
+.react-flow__edge:hover .react-flow__edge-text {
+  fill: var(--fc-text-secondary);
+}
+
+/* ============================================
+   Controls — Minimal floating bar
+   ============================================ */
+
+.react-flow__controls {
+  border-radius: var(--fc-radius-lg);
+  overflow: hidden;
+  box-shadow: var(--fc-shadow-lg);
+}
+
+.react-flow__controls-button {
+  background: var(--fc-bg-elevated);
+  border-color: var(--fc-border);
+  fill: var(--fc-text-muted);
+  width: 26px;
+  height: 26px;
+}
+
+.react-flow__controls-button:hover {
+  background: var(--fc-bg-overlay);
+  fill: var(--fc-text-primary);
+}
+
+/* ============================================
+   MiniMap
+   ============================================ */
+
+.react-flow__minimap {
+  background-color: var(--fc-bg-surface);
+  border-radius: var(--fc-radius-lg);
+  box-shadow: var(--fc-shadow);
+  border: 1px solid var(--fc-border);
+}
+
+/* ============================================
+   Selection
+   ============================================ */
+
+.react-flow__selection {
+  background: var(--fc-accent-glow);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+}
+
+/* ============================================
+   Pin Panel — Right sidebar
+   ============================================ */
+
+.pin-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 240px;
+  height: 100%;
+  background: var(--fc-bg-surface);
+  color: var(--fc-text-primary);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--fc-border);
+  font-family: var(--fc-font-sans);
+  font-size: 11px;
+}
+
+.pin-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 12px;
+  border-bottom: 1px solid var(--fc-border);
+}
+
+.pin-panel-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fc-text-muted);
+  margin-bottom: 4px;
+}
+
+.pin-panel-route {
+  font-family: var(--fc-font);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fc-accent);
+}
+
+.pin-panel-component {
+  font-size: 10px;
+  color: var(--fc-text-ghost);
+  margin-top: 2px;
+}
+
+.pin-panel-close {
+  background: none;
+  border: none;
+  color: var(--fc-text-ghost);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: var(--fc-radius);
+  transition: all var(--fc-transition);
+}
+
+.pin-panel-close:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--fc-text-primary);
+}
+
+.pin-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.pin-section {
+  margin-bottom: 16px;
+}
+
+.pin-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.pin-section-title {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fc-text-ghost);
+  margin: 0 0 6px 0;
+}
+
+.pin-section-header .pin-section-title {
+  margin: 0;
+}
+
+.pin-field {
+  margin-bottom: 8px;
+}
+
+.pin-label {
+  display: block;
+  font-family: var(--fc-font);
+  font-size: 9px;
+  color: var(--fc-text-ghost);
+  margin-bottom: 3px;
+  letter-spacing: 0.02em;
+}
+
+.pin-input {
+  width: 100%;
+  padding: 5px 7px;
+  background: var(--fc-bg-void);
+  border: 1px solid var(--fc-border);
+  border-radius: var(--fc-radius);
+  color: var(--fc-text-primary);
+  font-family: var(--fc-font);
+  font-size: 11px;
+  box-sizing: border-box;
+  height: 26px;
+  transition: border-color var(--fc-transition);
+}
+
+.pin-input:focus {
+  outline: none;
+  border-color: var(--fc-accent);
+  box-shadow: 0 0 0 1px var(--fc-accent-dim);
+}
+
+.pin-input::placeholder {
+  color: var(--fc-text-ghost);
+}
+
+.pin-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.pin-toggle input[type="checkbox"] {
+  accent-color: var(--fc-accent);
+}
+
+.pin-toggle-label {
+  color: var(--fc-text-secondary);
+  font-size: 11px;
+}
+
+.pin-auth-fields {
+  margin-top: 8px;
+}
+
+.pin-panel-footer {
+  padding: 8px 12px;
+  border-top: 1px solid var(--fc-border);
+}
+
+.pin-btn {
+  padding: 5px 10px;
+  border-radius: var(--fc-radius);
+  border: 1px solid var(--fc-border);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 500;
+  transition: all var(--fc-transition);
+}
+
+.pin-btn-clear {
+  background: transparent;
+  color: var(--fc-text-muted);
+  width: 100%;
+}
+
+.pin-btn-clear:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fc-text-primary);
+  border-color: var(--fc-border-hover);
+}
+
+.pin-global-badge {
+  display: inline-block;
+  background: var(--fc-accent-dim);
+  color: var(--fc-accent);
+  font-family: var(--fc-font);
+  font-size: 8px;
+  font-weight: 500;
+  padding: 1px 5px;
+  border-radius: 2px;
+  margin-left: 4px;
+  vertical-align: middle;
+  letter-spacing: 0.05em;
+}
+
+.pin-node-badge {
+  display: inline-block;
+  background: var(--fc-pin-dim);
+  color: var(--fc-pin);
+  font-family: var(--fc-font);
+  font-size: 8px;
+  font-weight: 500;
+  padding: 1px 5px;
+  border-radius: 2px;
+  margin-left: 4px;
+  vertical-align: middle;
+  letter-spacing: 0.05em;
+}

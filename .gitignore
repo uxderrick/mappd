@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+cli/canvas-dist/
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# FlowCanvas generated files (per-project)
+.flowcanvas/
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+
+# Test fixtures with local paths
+parser/src/__tests__/parse-partner-dashboard.ts
+parser/src/__tests__/parse-uxderrick.ts
+parser/src/__tests__/parse-ghanaians.ts
+
+# Local test scripts with hardcoded paths
+cli/src/capture-screenshots.ts
+
+# Agent skills (local install)
+.agents/
+skills-lock.json
+
+# Claude memory (local)
+.claude/
