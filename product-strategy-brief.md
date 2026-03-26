@@ -1,4 +1,4 @@
-# FlowCanvas Product Strategy Brief
+# Mappd Product Strategy Brief
 
 > Compiled 2026-03-26 from research across 15+ topics covering dev tool GTM, pricing, growth, and positioning.
 
@@ -6,7 +6,7 @@
 
 ## Table of Contents
 
-1. [What FlowCanvas Is Competing On](#1-what-flowcanvas-is-competing-on)
+1. [What Mappd Is Competing On](#1-what-mappd-is-competing-on)
 2. [Jobs to Be Done Analysis](#2-jobs-to-be-done-analysis)
 3. [Lessons from Analogous Products](#3-lessons-from-analogous-products)
 4. [Go-to-Market Strategy](#4-go-to-market-strategy)
@@ -21,9 +21,9 @@
 
 ---
 
-## 1. What FlowCanvas Is Competing On
+## 1. What Mappd Is Competing On
 
-FlowCanvas is not a design tool, not a component library, and not a project management tool. It occupies a new category:
+Mappd is not a design tool, not a component library, and not a project management tool. It occupies a new category:
 
 **"Live application topology for frontend developers."**
 
@@ -33,17 +33,17 @@ The closest analogues are:
 - **React DevTools** — inspects live app state (but no spatial overview, no flow visualization)
 - **Vercel Preview Deployments** — shows live app (but one screen at a time)
 
-FlowCanvas's unique value: **see your entire app's screen topology rendered live, simultaneously, on an infinite canvas with flow connections.** No other tool does this.
+Mappd's unique value: **see your entire app's screen topology rendered live, simultaneously, on an infinite canvas with flow connections.** No other tool does this.
 
 ### Positioning Statement
 
-> FlowCanvas gives React developers a bird's-eye view of their entire application — every screen rendered live, connected by actual navigation flows, on an infinite canvas. Stop clicking through your app to verify changes. See everything at once.
+> Mappd gives React developers a bird's-eye view of their entire application — every screen rendered live, connected by actual navigation flows, on an infinite canvas. Stop clicking through your app to verify changes. See everything at once.
 
 ---
 
 ## 2. Jobs to Be Done Analysis
 
-The JTBD framework (Tony Ulwick / Strategyn) asks: what "job" is the developer "hiring" FlowCanvas to do? The answer is NOT "render screens on a canvas." That's a feature. The jobs are:
+The JTBD framework (Tony Ulwick / Strategyn) asks: what "job" is the developer "hiring" Mappd to do? The answer is NOT "render screens on a canvas." That's a feature. The jobs are:
 
 ### Primary Job
 **"When I'm building a multi-screen React app, help me understand and verify the full picture without manually navigating screen by screen."**
@@ -79,7 +79,7 @@ Figma grew from stealth to $749M revenue and 13M users. Claire Butler (first bus
 4. **Evangelists** — Built an evangelist program. Gave insiders access to betas, roadmaps, and executives.
 5. **Enterprise** — Connected individual users who loved the product with an enterprise sales motion. 70% of enterprise accounts started with one designer upgrading from free to pro.
 
-**Applies to FlowCanvas:**
+**Applies to Mappd:**
 - Phase 1 is NOW. Find 10-20 React developers who build multi-screen apps. Give them early access. Build relationships.
 - The "wow" screenshot of an app's full canvas IS the viral artifact (like Figma's multiplayer cursors).
 - Don't rush to enterprise. Let individuals fall in love first.
@@ -94,10 +94,10 @@ Linear reached $400M valuation with only $35K lifetime marketing spend. Key prin
 - **Bottom-up adoption.** Teams invite colleagues. Network effects without ad spend.
 - **Premium positioning.** Linear is described as "a Veblen good for developers" — using it signals you care about craft.
 
-**Applies to FlowCanvas:**
+**Applies to Mappd:**
 - Be opinionated. Don't try to support every framework. React first. Do it exceptionally well.
 - Speed is non-negotiable. Canvas interactions must be 60fps. Iframe loading must feel instant.
-- The aesthetic matters. Developers using FlowCanvas should feel like they're using a premium tool.
+- The aesthetic matters. Developers using Mappd should feel like they're using a premium tool.
 - Position as "for teams that care about their frontend." Not "for everyone."
 
 ### Vercel: Open Source to Commercial Flywheel
@@ -110,7 +110,7 @@ Vercel crossed $200M revenue with 100,000+ monthly signups via freemium self-ser
 - **Tier strategy:** Free (fall in love) -> Pro (idea to deployment fast) -> Enterprise (end-to-end platform).
 - **Target specific verticals.** They picked Media/Publishing and Ecommerce first — verticals where performance mattered most.
 
-**Applies to FlowCanvas:**
+**Applies to Mappd:**
 - The CLI + canvas viewer should be free forever for individual developers.
 - Identify which types of React apps benefit most (multi-screen apps with complex flows: dashboards, SaaS products, e-commerce).
 - If you build an open-source parser/renderer, the commercial value is in the hosted/team experience.
@@ -124,9 +124,9 @@ Storybook is used by thousands of companies (Airbnb, Microsoft, LEGO). Monetizat
 - **Enterprise support** as a separate revenue stream.
 - **Pledge:** Won't withhold OSS features to monetize them. Commercial products are additive.
 
-**Applies to FlowCanvas:**
-- The Storybook model validates "OSS tool + cloud companion." FlowCanvas could follow: free local tool + paid cloud service (shared team canvas, CI visual diffs, hosted previews).
-- Storybook's weakness is FlowCanvas's opportunity: Storybook renders components in isolation. FlowCanvas renders full screens in context with flow connections.
+**Applies to Mappd:**
+- The Storybook model validates "OSS tool + cloud companion." Mappd could follow: free local tool + paid cloud service (shared team canvas, CI visual diffs, hosted previews).
+- Storybook's weakness is Mappd's opportunity: Storybook renders components in isolation. Mappd renders full screens in context with flow connections.
 
 ---
 
@@ -160,7 +160,7 @@ Storybook is used by thousands of companies (Airbnb, Microsoft, LEGO). Monetizat
 
 - npm install should "just work" on any React project.
 - The generated canvas view should be inherently shareable (screenshots, links).
-- GitHub README badge: "View app flow on FlowCanvas."
+- GitHub README badge: "View app flow on Mappd."
 
 ### Key GTM Metrics (from Evil Martians PMF Compass)
 - Users returning within a week
@@ -213,7 +213,7 @@ Based on research across Figma, Linear, Vercel, Storybook/Chromatic, and dev too
 - Twitter/X threads showing the canvas in action.
 
 ### Tier 3: Content Marketing
-- "How [open-source app] looks on FlowCanvas" — render well-known React apps and share the result.
+- "How [open-source app] looks on Mappd" — render well-known React apps and share the result.
 - "The case against clicking through your app" — problem-awareness content.
 - Video walkthroughs on YouTube/Twitter.
 
@@ -234,12 +234,12 @@ In any community: 90% consume content, 9% participate when they have issues, 1% 
 
 Research confirms: for developer tools, MVP is not enough. Developers have high standards and abundant alternatives. An MVP that feels rough will be dismissed. An MLP creates emotional connection — users return and recommend it.
 
-The MLP bar for FlowCanvas:
+The MLP bar for Mappd:
 
 ### Must Have for v1.0 (MLP)
 | Feature | Why It's Essential |
 |---------|--------------------|
-| `npx flowcanvas` works on any React Router app | Zero-config entry point. This IS the product. |
+| `npx mappd` works on any React Router app | Zero-config entry point. This IS the product. |
 | Infinite canvas with smooth pan/zoom | Core interaction. Must be 60fps. Janky = dead. |
 | All screens rendered live via iframes | The "wow" moment. Must actually show real screens. |
 | Flow lines connecting screens by navigation | Differentiator from "just a grid of iframes." |
@@ -287,7 +287,7 @@ Six things developer tools must have to earn trust:
 
 | Feature | Impact (1-10) | Confidence (1-10) | Ease (1-10) | ICE Score |
 |---------|--------------|-------------------|-------------|-----------|
-| Zero-config CLI (`npx flowcanvas`) | 10 | 9 | 6 | 540 |
+| Zero-config CLI (`npx mappd`) | 10 | 9 | 6 | 540 |
 | Smooth canvas pan/zoom | 9 | 10 | 7 | 630 |
 | Live iframe rendering | 10 | 8 | 5 | 400 |
 | Flow line connections | 8 | 9 | 6 | 432 |
@@ -311,8 +311,8 @@ Six things developer tools must have to earn trust:
 ### Primary: npm / npx
 
 ```
-npx flowcanvas          # zero-install, runs immediately
-npm install -D flowcanvas  # project dependency
+npx mappd          # zero-install, runs immediately
+npm install -D mappd  # project dependency
 ```
 
 Key principles from research:
@@ -384,7 +384,7 @@ Key principles from research:
 ### Business Model Mistakes
 1. **Open-sourcing everything with no commercial strategy.** Have a plan for what's free vs. paid before you open source.
 2. **Paywalling individual features to force team upgrades.** Developers resent artificial limits.
-3. **Not having an escape hatch.** If developers feel locked in, they won't adopt. Make it easy to stop using FlowCanvas.
+3. **Not having an escape hatch.** If developers feel locked in, they won't adopt. Make it easy to stop using Mappd.
 
 ---
 
@@ -412,7 +412,7 @@ Key principles from research:
 - [ ] Blog post / Twitter thread about what you've learned
 
 ### Phase 3: v1.0 - Public Launch (Month 5-6)
-- [ ] `npx flowcanvas` works zero-config on React Router apps
+- [ ] `npx mappd` works zero-config on React Router apps
 - [ ] Beautiful default theme (Linear-level polish)
 - [ ] Landing page with live demo
 - [ ] Product Hunt launch
@@ -428,7 +428,7 @@ Key principles from research:
 
 ---
 
-## Summary: The FlowCanvas Playbook
+## Summary: The Mappd Playbook
 
 | Question | Answer |
 |----------|--------|

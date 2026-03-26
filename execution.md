@@ -1,4 +1,4 @@
-# FlowCanvas — Execution Log
+# Mappd — Execution Log
 
 > Record of what the agent executed, decisions made, trade-offs considered, and outcomes.
 > Self-updating — the agent appends after each significant action.
@@ -42,7 +42,7 @@
 **Related:** learnings.md → auth should be global not per-node
 
 ### [2026-03-23] Screenshot capture with Puppeteer
-**What was done:** Built `cli/src/screenshot.ts` — Puppeteer headless browser captures each route at 1280×800, writes PNGs to `.flowcanvas/screenshots/`, generates `screenshots.json` manifest. Concurrency capped at 2. Waits for `networkidle2` + 1s extra for client-side render. Fallback: 1×1 transparent PNG on failure.
+**What was done:** Built `cli/src/screenshot.ts` — Puppeteer headless browser captures each route at 1280×800, writes PNGs to `.mappd/screenshots/`, generates `screenshots.json` manifest. Concurrency capped at 2. Waits for `networkidle2` + 1s extra for client-side render. Fallback: 1×1 transparent PNG on failure.
 **Why:** Static thumbnails let the canvas render fast without spinning up live iframes for every node. Live mode only activates on double-click.
 **Trade-offs:** Puppeteer is a heavy dependency (~300MB). Considered Playwright (similar weight, better API) but Puppeteer has wider adoption for this use case. Could explore lighter alternatives (e.g., `playwright-core` with shared browser) later. 15s timeout per route is generous but prevents hanging on broken routes.
 **Outcome:** Screenshots render in ScreenNode thumbnail mode. Canvas loads instantly with static previews. Double-click switches to live iframe.
@@ -83,11 +83,11 @@
 **Outcome:** All three parsers produce consistent `ScreenNode[]` + route metadata. Tested against demo-app (React Router v7).
 **Related:** todo.md → Route parsers (done)
 
-### [2026-03-23] CLI tool — `flowcanvas dev`
-**What was done:** Built `cli/src/` — Commander.js CLI with `flowcanvas dev` command. Options: `--port` (canvas, default 4200), `--target-port` (dev server, default 5173), `--dir` (project dir). Orchestrates: validate project → detect framework → parse routes → write `.flowcanvas/flow-graph.json` → start Express server → start file watcher → capture screenshots.
+### [2026-03-23] CLI tool — `mappd dev`
+**What was done:** Built `cli/src/` — Commander.js CLI with `mappd dev` command. Options: `--port` (canvas, default 4200), `--target-port` (dev server, default 5173), `--dir` (project dir). Orchestrates: validate project → detect framework → parse routes → write `.mappd/flow-graph.json` → start Express server → start file watcher → capture screenshots.
 **Why:** Single command to go from "I have a React app" to "I see my entire flow on a canvas."
-**Trade-offs:** Express over Fastify (simpler, more familiar). Single process orchestrates everything (parser, server, watcher, screenshot) — could be split into workers later if perf matters. `.flowcanvas/` output directory keeps artifacts out of source.
-**Outcome:** `flowcanvas dev` runs end-to-end. Serves canvas on specified port. Hot reloads on file changes.
+**Trade-offs:** Express over Fastify (simpler, more familiar). Single process orchestrates everything (parser, server, watcher, screenshot) — could be split into workers later if perf matters. `.mappd/` output directory keeps artifacts out of source.
+**Outcome:** `mappd dev` runs end-to-end. Serves canvas on specified port. Hot reloads on file changes.
 **Related:** todo.md → CLI tool (done)
 
 ### [2026-03-23] Feasibility analysis — per-node DevTools
@@ -99,7 +99,7 @@
 
 ### [2026-03-23] PoC implementation — demo-app + canvas
 **What was done:** Built two Vite+React+TS apps from scratch. Demo-app (5 routes with auth flow) on :5173, canvas (React Flow with iframe nodes) on :4200. Implemented postMessage navigation interception and active node highlighting.
-**Why:** Validate the core FlowCanvas interaction — click a link in one screen, canvas pans to the destination screen.
+**Why:** Validate the core Mappd interaction — click a link in one screen, canvas pans to the destination screen.
 **Trade-offs:** Used iframes (isolation, framework-agnostic) over React portals (tighter integration but coupled). Hardcoded graph instead of auto-parsing — intentional for PoC. Removed global form submit interception after it conflicted with React handlers.
 **Outcome:** Both apps running. Link click interception works. Active node glow works. Node centering still needs tuning (using getInternalNode for measured dimensions). Form submit flow needs verification.
 **Related:** learnings.md → form interception conflict, setCenter dimensions

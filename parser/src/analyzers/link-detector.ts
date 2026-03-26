@@ -33,7 +33,7 @@ export function detectLinks(
   const fetcherVars = new Set<string>();
 
   traverse(ast, {
-    // Detect: const navigate = useNavigate() / useFlowCanvasNavigate()
+    // Detect: const navigate = useNavigate() / useMappdNavigate()
     // Detect: const router = useRouter()
     // Detect: const submit = useSubmit()
     // Detect: const fetcher = useFetcher()

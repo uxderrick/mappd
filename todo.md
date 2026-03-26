@@ -1,4 +1,4 @@
-# FlowCanvas — TODO
+# Mappd — TODO
 
 > Running backlog of planned work, features, and tasks.
 > Updated by the agent as new items are identified or completed.
@@ -22,7 +22,7 @@ Priorities: `P0` (critical/blocking), `P1` (important), `P2` (nice-to-have), `P3
 - [x] **Polish pan animation** — 600ms duration, zoom-aware maxZoom capping `[P2]` `[done: 2026-03-24]`
 
 ### MVP Backlog
-- [x] **CLI tool** — `flowcanvas dev` parses, serves, watches `[P1]` `[done: 2026-03-23]`
+- [x] **CLI tool** — `mappd dev` parses, serves, watches `[P1]` `[done: 2026-03-23]`
 - [x] **Route parser: React Router v6+** — AST analysis to auto-detect routes `[P1]` `[done: 2026-03-23]`
 - [x] **Route parser: Next.js** — App Router + Pages Router file-system scanning `[P1]` `[done: 2026-03-23]`
 - [x] **Navigation link detection** — Scan for `<Link>`, `useNavigate()`, `router.push()` `[P1]` `[done: 2026-03-23]`

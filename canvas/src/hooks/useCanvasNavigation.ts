@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { useReactFlow, type Node } from '@xyflow/react';
-import type { FlowCanvasMessage, ScreenNodeData } from '../types';
+import type { MappdMessage, ScreenNodeData } from '../types';
 
 function matchDynamicRoute(pathname: string, pattern: string): boolean {
   const pathParts = pathname.split('/');
@@ -42,7 +42,7 @@ export function useCanvasNavigation(
 
   const handleMessage = useCallback(
     (event: MessageEvent) => {
-      const message = event.data as FlowCanvasMessage;
+      const message = event.data as MappdMessage;
       if (!message || message.type !== 'fc-navigate') return;
 
       const { to, data: messageData } = message;

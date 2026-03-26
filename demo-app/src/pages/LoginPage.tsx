@@ -1,12 +1,12 @@
 import { type FormEvent, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useFlowCanvasNavigate } from '../hooks/useFlowCanvasNavigate';
+import { useMappdNavigate } from '../hooks/useMappdNavigate';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const { setUsername: setAuthUsername } = useAuth();
-  const navigate = useFlowCanvasNavigate();
+  const navigate = useMappdNavigate();
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();

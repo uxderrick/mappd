@@ -1,4 +1,4 @@
-# FlowCanvas — Product Plan
+# Mappd — Product Plan
 
 **From PoC to v1.0 and beyond.**
 *Last updated: 2026-03-26*
@@ -16,7 +16,7 @@
 | Component | Status |
 |-----------|--------|
 | Route parser (React Router v6+ & Next.js) | Done |
-| CLI tool (`flowcanvas dev`) | Done |
+| CLI tool (`mappd dev`) | Done |
 | Infinite canvas (React Flow) | Done |
 | Navigation interception (postMessage) | Done |
 | State pinning (global auth + per-node URL params) | Done |
@@ -78,7 +78,7 @@ Borrowed from Linear, Figma, and Vercel:
 ### 2. Developer Experience
 
 ```
-├── 2.1 Installation: `npx flowcanvas` zero-config
+├── 2.1 Installation: `npx mappd` zero-config
 ├── 2.2 CLI: dev, init, export commands
 ├── 2.3 Error handling: graceful failures, clear messages
 ├── 2.4 Documentation: README, guides, troubleshooting
@@ -124,7 +124,7 @@ Borrowed from Linear, Figma, and Vercel:
 
 ```
 ├── 7.1 Unique: live screen map, per-node DevTools, auto-detected graph
-├── 7.2 Network effects: .flowcanvas config in repos, community plugins
+├── 7.2 Network effects: .mappd config in repos, community plugins
 └── 7.3 Switching costs: saved pins, custom layouts, team workflows
 ```
 
@@ -163,7 +163,7 @@ What ships. Nothing more. Everything else defers.
 
 | Feature | Why |
 |---------|-----|
-| `npx flowcanvas` zero-config on React Router apps | This IS the product |
+| `npx mappd` zero-config on React Router apps | This IS the product |
 | 60fps canvas pan/zoom | Janky = dead |
 | Live iframe rendering for all detected screens | The "wow" moment |
 | Flow lines with auto-detected navigation edges | The differentiator |
@@ -199,7 +199,7 @@ What ships. Nothing more. Everything else defers.
 
 | Week | Action |
 |------|--------|
-| 1-2 | Bundle canvas into CLI. `npx flowcanvas` works end-to-end. |
+| 1-2 | Bundle canvas into CLI. `npx mappd` works end-to-end. |
 | 2-3 | Polish: error handling, edge cases, performance. Test on 5+ real projects. |
 | 3-4 | Landing page. README. Demo video/GIF. |
 | 4 | Share with 10-20 hand-picked React developers. Collect feedback. |
@@ -231,7 +231,7 @@ What ships. Nothing more. Everything else defers.
 
 1. **No one else does this.** Live app topology on an infinite canvas — new category.
 2. **The parser is the moat.** Detecting routes and navigation across React Router + Next.js is hard. Each framework we add deepens the moat.
-3. **Config files in repos.** When teams commit `.flowcanvas/` to their repos, FlowCanvas becomes infrastructure.
+3. **Config files in repos.** When teams commit `.mappd/` to their repos, Mappd becomes infrastructure.
 4. **The viral screenshot.** Seeing your entire app laid out on a canvas is inherently shareable. Every screenshot is marketing.
 
 ---
@@ -251,7 +251,7 @@ What ships. Nothing more. Everything else defers.
 ## Next Immediate Actions
 
 1. [ ] Bundle canvas into CLI (single `npm install`)
-2. [ ] Test `npx flowcanvas` on 5 diverse React Router projects
+2. [ ] Test `npx mappd` on 5 diverse React Router projects
 3. [ ] Write README with quick start + demo GIF
 4. [ ] Create landing page (even a simple one)
 5. [ ] Start posting about the problem on Twitter/X

@@ -18,5 +18,5 @@ export function buildIframeSrc(
     resolvedPath = resolvedPath.replace(/:(\w+)/g, '1');
   }
 
-  return `${devServerUrl}${resolvedPath}?flowcanvas=true`;
+  return `${devServerUrl}${resolvedPath}?mappd=true`;
 }

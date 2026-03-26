@@ -28,7 +28,7 @@ export interface ScreenNodeData {
   [key: string]: unknown;
 }
 
-export interface FlowCanvasMessage {
+export interface MappdMessage {
   type: 'fc-navigate';
   from: string;
   to: string;

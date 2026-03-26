@@ -43,9 +43,9 @@ try {
     console.log(`WARNING: Only ${graph.edges.length} edges found, expected at least 5`);
   }
 
-  // Write to .flowcanvas/flow-graph.json
+  // Write to .mappd/flow-graph.json
   parseAndWrite(DEMO_APP_DIR);
-  console.log('\nWritten to demo-app/.flowcanvas/flow-graph.json');
+  console.log('\nWritten to demo-app/.mappd/flow-graph.json');
 } catch (err) {
   console.error('Parse failed:', err);
   process.exit(1);

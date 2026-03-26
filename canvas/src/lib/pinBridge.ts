@@ -2,7 +2,7 @@ import type { PinnedState } from '../types';
 
 /**
  * Send pinned state to an iframe via postMessage.
- * The iframe's fc-inject.js script handles the fc-pin-state message.
+ * The iframe's mappd-inject.js script handles the fc-pin-state message.
  */
 export function sendPinToIframe(iframe: HTMLIFrameElement, pin: PinnedState): void {
   iframe.contentWindow?.postMessage(

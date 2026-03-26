@@ -26,7 +26,7 @@ export function createServer(options: ServerOptions) {
     ws.on('close', () => clients.delete(ws));
   });
 
-  // Serve flow-graph.json from .flowcanvas directory
+  // Serve flow-graph.json from .mappd directory
   app.get('/flow-graph.json', (_req, res) => {
     const graphPath = path.join(flowGraphDir, 'flow-graph.json');
     if (fs.existsSync(graphPath)) {
@@ -39,7 +39,7 @@ export function createServer(options: ServerOptions) {
   });
 
   // Serve config (target port, etc.) for the canvas to know where to point iframes
-  app.get('/flowcanvas-config.json', (_req, res) => {
+  app.get('/mappd-config.json', (_req, res) => {
     res.json({
       targetPort,
       wsPort: port,
@@ -61,7 +61,7 @@ export function createServer(options: ServerOptions) {
         <html>
           <head><meta http-equiv="refresh" content="0;url=http://localhost:4200" /></head>
           <body>
-            <p>Redirecting to <a href="http://localhost:4200">FlowCanvas Canvas</a>...</p>
+            <p>Redirecting to <a href="http://localhost:4200">Mappd Canvas</a>...</p>
             <p>In production, the canvas is bundled. For development, run the canvas dev server separately.</p>
           </body>
         </html>

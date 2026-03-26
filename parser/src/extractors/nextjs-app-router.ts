@@ -186,7 +186,7 @@ function detectRouteGroupConflicts(routes: ParsedRoute[]): void {
     const existing = seen.get(route.path);
     if (existing && existing !== route.componentFilePath) {
       console.warn(
-        `[flowcanvas] Route conflict: path "${route.path}" is defined by both:\n` +
+        `[mappd] Route conflict: path "${route.path}" is defined by both:\n` +
           `  - ${existing}\n` +
           `  - ${route.componentFilePath}\n` +
           `  This usually happens when multiple route groups produce the same URL.`,

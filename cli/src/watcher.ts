@@ -4,7 +4,7 @@ import path from 'node:path';
 const WATCH_EXTENSIONS = ['.tsx', '.ts', '.jsx', '.js'];
 const IGNORE_PATTERNS = [
   '**/node_modules/**',
-  '**/.flowcanvas/**',
+  '**/.mappd/**',
   '**/dist/**',
   '**/build/**',
   '**/.next/**',

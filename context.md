@@ -1,4 +1,4 @@
-# FlowCanvas — Build Context & Breakdown
+# Mappd — Build Context & Breakdown
 
 ## What We're Building
 
@@ -56,13 +56,13 @@ A localhost dev tool that renders **all screens** of a React app on an **infinit
 **Goal:** A usable CLI tool that auto-detects routes and renders the canvas.
 
 **What gets built:**
-1. **CLI** (`flowcanvas dev`) — boots a Vite dev server serving the canvas app
+1. **CLI** (`mappd dev`) — boots a Vite dev server serving the canvas app
 2. **Route Parser** — AST analysis (Babel) to detect React Router v6+ and Next.js routes
 3. **Navigation Link Detection** — scan for `<Link>`, `useNavigate()`, `router.push()` in component files
 4. **Auto-layout** — Dagre/ELK.js to arrange nodes in a directed graph
 5. **State Pinning** — side panel per node to inject props, auth context, URL params, mock API responses
 6. **File Watcher** — chokidar watches source files, re-renders affected nodes on change
-7. **WebSocket Communication** — real-time updates between FlowCanvas server and canvas UI
+7. **WebSocket Communication** — real-time updates between Mappd server and canvas UI
 
 ---
 
@@ -94,7 +94,7 @@ A localhost dev tool that renders **all screens** of a React app on an **infinit
 ## Key Architecture Decisions
 
 ### How screens render: Iframes
-Each screen node contains an iframe pointing to the project's running dev server at a specific route. A query param (`?flowcanvas=true&route=/path`) signals the app. This gives us:
+Each screen node contains an iframe pointing to the project's running dev server at a specific route. A query param (`?mappd=true&route=/path`) signals the app. This gives us:
 - Full isolation between screens
 - Each screen runs in its own React context
 - No interference between screen states
@@ -107,7 +107,7 @@ A lightweight script injected into each iframe intercepts link clicks and form s
 4. Form data is forwarded to the destination node's iframe
 
 ### How state pinning works: JSON files
-Pinned state stored in `.flowcanvas/pins.json` in the project root. Each node can have:
+Pinned state stored in `.mappd/pins.json` in the project root. Each node can have:
 - `props` — key-value pairs passed to the component
 - `authContext` — mock user/auth state
 - `urlParams` — dynamic route parameters
@@ -153,7 +153,7 @@ interface FlowGraph {
     projectName: string;
     framework: 'react-router' | 'nextjs-app' | 'nextjs-pages';
     generatedAt: string;
-    flowcanvasVersion: string;
+    mappdVersion: string;
   };
 }
 ```
@@ -184,7 +184,7 @@ interface FlowGraph {
 ### Step 1: Project Scaffolding
 - Initialize a monorepo (or simple workspace) with two packages:
   - `demo-app/` — the 5-screen React Router demo app
-  - `canvas/` — the FlowCanvas React Flow application
+  - `canvas/` — the Mappd React Flow application
 - Both powered by Vite + TypeScript + React
 
 ### Step 2: Build the Demo App
@@ -216,4 +216,4 @@ interface FlowGraph {
 
 ---
 
-*This document is the working context for building FlowCanvas. Update it as decisions are made and questions are resolved.*
+*This document is the working context for building Mappd. Update it as decisions are made and questions are resolved.*

@@ -80,6 +80,6 @@ export function detectFramework(projectDir: string): FrameworkDetection {
   }
 
   throw new Error(
-    'Could not detect routing framework. FlowCanvas supports React Router v6+ and Next.js.'
+    'Could not detect routing framework. Mappd supports React Router v6+ and Next.js.'
   );
 }

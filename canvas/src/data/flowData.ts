@@ -10,7 +10,7 @@ export const initialNodes: Node<ScreenNodeData>[] = [
     data: {
       routePath: '/',
       componentName: 'LandingPage',
-      iframeSrc: 'http://localhost:5173/?flowcanvas=true',
+      iframeSrc: 'http://localhost:5173/?mappd=true',
     },
   },
   {
@@ -21,7 +21,7 @@ export const initialNodes: Node<ScreenNodeData>[] = [
     data: {
       routePath: '/login',
       componentName: 'LoginPage',
-      iframeSrc: 'http://localhost:5173/login?flowcanvas=true',
+      iframeSrc: 'http://localhost:5173/login?mappd=true',
     },
   },
   {
@@ -32,7 +32,7 @@ export const initialNodes: Node<ScreenNodeData>[] = [
     data: {
       routePath: '/dashboard',
       componentName: 'DashboardPage',
-      iframeSrc: 'http://localhost:5173/dashboard?flowcanvas=true',
+      iframeSrc: 'http://localhost:5173/dashboard?mappd=true',
     },
   },
   {
@@ -43,7 +43,7 @@ export const initialNodes: Node<ScreenNodeData>[] = [
     data: {
       routePath: '/dashboard/settings',
       componentName: 'SettingsPage',
-      iframeSrc: 'http://localhost:5173/dashboard/settings?flowcanvas=true',
+      iframeSrc: 'http://localhost:5173/dashboard/settings?mappd=true',
     },
   },
   {
@@ -54,7 +54,7 @@ export const initialNodes: Node<ScreenNodeData>[] = [
     data: {
       routePath: '/dashboard/users/:id',
       componentName: 'UserDetailPage',
-      iframeSrc: 'http://localhost:5173/dashboard/users/1?flowcanvas=true',
+      iframeSrc: 'http://localhost:5173/dashboard/users/1?mappd=true',
     },
   },
 ];

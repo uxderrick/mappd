@@ -2,7 +2,7 @@ import puppeteer from 'puppeteer';
 import fs from 'node:fs';
 import path from 'node:path';
 import pc from 'picocolors';
-import type { FlowGraph } from '@flowcanvas/parser';
+import type { FlowGraph } from '@mappd/parser';
 
 interface ScreenshotOptions {
   targetPort: number;
@@ -14,7 +14,7 @@ interface ScreenshotOptions {
 
 /**
  * Capture screenshots for all routes in the flow graph.
- * Saves PNGs to .flowcanvas/screenshots/
+ * Saves PNGs to .mappd/screenshots/
  */
 export async function captureScreenshots(
   graph: FlowGraph,

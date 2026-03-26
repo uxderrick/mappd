@@ -2,7 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { isFlowCanvasMode, setupFlowCanvasInterception } from './utils/flowcanvas';
+import { isMappdMode, setupMappdInterception } from './utils/mappd';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -41,6 +41,6 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>
 );
 
-if (isFlowCanvasMode()) {
-  setupFlowCanvasInterception();
+if (isMappdMode()) {
+  setupMappdInterception();
 }

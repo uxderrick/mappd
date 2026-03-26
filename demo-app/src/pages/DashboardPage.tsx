@@ -51,7 +51,7 @@ export default function DashboardPage() {
         <div className="sidebar-header">
           <div className="sidebar-logo">FC</div>
           <div>
-            <div className="sidebar-title">FlowCanvas</div>
+            <div className="sidebar-title">Mappd</div>
             <div className="sidebar-user">Welcome, {username || 'User'}</div>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { type FormEvent, useState } from 'react';
-import { useFlowCanvasNavigate } from '../hooks/useFlowCanvasNavigate';
+import { useMappdNavigate } from '../hooks/useMappdNavigate';
 
 const STEPS = ['Details', 'Team', 'Review'];
 
@@ -8,7 +8,7 @@ export default function CreateProjectPage() {
   const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-  const navigate = useFlowCanvasNavigate();
+  const navigate = useMappdNavigate();
 
   const members = ['Alice Johnson', 'Bob Smith', 'Charlie Brown'];
 

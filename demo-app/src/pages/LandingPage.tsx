@@ -6,7 +6,7 @@ export default function LandingPage() {
       <div className="landing-content">
         <h1>Winston Demo</h1>
         <p className="tagline">
-          A multi-screen React app for testing FlowCanvas navigation
+          A multi-screen React app for testing Mappd navigation
         </p>
         <Link to="/login" className="btn btn-primary btn-lg">
           Get Started Now

@@ -1,5 +1,5 @@
 /**
- * FlowCanvas Injection Script
+ * Mappd Injection Script
  * Injected into target app iframes to intercept navigation.
  * Each iframe should stay on its assigned route — navigation events
  * are forwarded to the parent canvas which pans to the correct node.

@@ -1,4 +1,4 @@
-# FlowCanvas — Learnings
+# Mappd — Learnings
 
 > Insights, patterns, gotchas, and decisions captured during implementation.
 > Self-updating — the agent adds entries as we build and discover things.
@@ -62,8 +62,8 @@
 **Related:** todo.md → Per-node DevTools panel
 
 ### [2026-03-23] Global form interception conflicts with React event handlers
-**Context:** FlowCanvas interception script was catching form submits in capture phase, preventing React's `onSubmit` from firing.
-**Learning:** `document.addEventListener('submit', ..., true)` fires before React synthetic events. The interception script sent a postMessage with the form's `action` URL (current page `/login`) instead of the programmatic destination (`/dashboard`). Fix: removed global form interception; programmatic navigation handled by `useFlowCanvasNavigate` hook.
+**Context:** Mappd interception script was catching form submits in capture phase, preventing React's `onSubmit` from firing.
+**Learning:** `document.addEventListener('submit', ..., true)` fires before React synthetic events. The interception script sent a postMessage with the form's `action` URL (current page `/login`) instead of the programmatic destination (`/dashboard`). Fix: removed global form interception; programmatic navigation handled by `useMappdNavigate` hook.
 **Why it matters:** For MVP auto-detection, be careful about global vs. app-handled events. Hook-based approach is cleaner for programmatic navigation.
 **Related:** execution.md → PoC implementation
 

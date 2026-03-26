@@ -1,8 +1,8 @@
-# FlowCanvas
+# Mappd
 
 See your entire React app at once. Stop clicking through screens.
 
-FlowCanvas renders every route in your application on an infinite canvas, connected by auto-detected navigation flows. It is a localhost dev tool for React developers who are tired of manually navigating through their apps to reach deep screens.
+Mappd renders every route in your application on an infinite canvas, connected by auto-detected navigation flows. It is a localhost dev tool for React developers who are tired of manually navigating through their apps to reach deep screens.
 
 <!-- TODO: Add screenshot/GIF of canvas -->
 <img width="3068" height="2096" alt="image" src="https://github.com/user-attachments/assets/fffb479e-c595-4a6b-a46b-f6d2e234113a" />
@@ -12,12 +12,12 @@ FlowCanvas renders every route in your application on an infinite canvas, connec
 ## Quick Start
 
 ```bash
-npm install -g flowcanvas
+npm install -g mappd
 cd your-react-project
-flowcanvas dev
+mappd dev
 ```
 
-That's it. FlowCanvas parses your routes, starts a canvas server, and opens your entire app on one screen.
+That's it. Mappd parses your routes, starts a canvas server, and opens your entire app on one screen.
 
 Your app's dev server should already be running (default: port 5173).
 
@@ -47,12 +47,12 @@ Your app's dev server should already be running (default: port 5173).
 
 ## CLI Reference
 
-### `flowcanvas dev`
+### `mappd dev`
 
-Start the FlowCanvas dev server for the current project.
+Start the Mappd dev server for the current project.
 
 ```bash
-flowcanvas dev [options]
+mappd dev [options]
 ```
 
 | Flag | Description | Default |
@@ -65,34 +65,34 @@ flowcanvas dev [options]
 
 ```bash
 # Default: canvas on :4200, app on :5173
-flowcanvas dev
+mappd dev
 
 # Custom ports
-flowcanvas dev --port 3000 --target-port 8080
+mappd dev --port 3000 --target-port 8080
 
 # Point to a different project directory
-flowcanvas dev --dir ./packages/web
+mappd dev --dir ./packages/web
 ```
 
 ---
 
 ## How It Works
 
-FlowCanvas uses Babel-based AST analysis to statically parse your routing configuration and detect navigation patterns (`<Link>`, `useNavigate()`, `router.push()`). It builds a directed graph of your app's screens and connections, then renders each route as a live iframe on a React Flow canvas. A lightweight script injected into each iframe intercepts navigation events via `postMessage`, so clicking a link pans the canvas instead of navigating away. A file watcher monitors your source code and pushes graph updates over WebSocket in real-time.
+Mappd uses Babel-based AST analysis to statically parse your routing configuration and detect navigation patterns (`<Link>`, `useNavigate()`, `router.push()`). It builds a directed graph of your app's screens and connections, then renders each route as a live iframe on a React Flow canvas. A lightweight script injected into each iframe intercepts navigation events via `postMessage`, so clicking a link pans the canvas instead of navigating away. A file watcher monitors your source code and pushes graph updates over WebSocket in real-time.
 
 ---
 
 ## Configuration
 
-FlowCanvas is designed to work with zero configuration. The CLI flags above cover most use cases.
+Mappd is designed to work with zero configuration. The CLI flags above cover most use cases.
 
-Project-specific data is stored in a `.flowcanvas/` directory in your project root. This is created automatically and contains:
+Project-specific data is stored in a `.mappd/` directory in your project root. This is created automatically and contains:
 
 - `flow-graph.json` -- the parsed route graph
 - `pins.json` -- pinned state for screen nodes (auth context, URL params, props)
 - Screenshot thumbnails
 
-You can commit `.flowcanvas/` to your repo or add it to `.gitignore`. Your call.
+You can commit `.mappd/` to your repo or add it to `.gitignore`. Your call.
 
 ---
 

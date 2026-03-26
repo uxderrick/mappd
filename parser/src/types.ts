@@ -55,7 +55,7 @@ export interface FlowGraph {
     projectName: string;
     framework: 'react-router' | 'nextjs-app' | 'nextjs-pages';
     generatedAt: string;
-    flowcanvasVersion: string;
+    mappdVersion: string;
   };
 }
 

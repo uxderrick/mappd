@@ -269,11 +269,11 @@ function parseNextConfigRedirects(projectDir: string): DetectedLink[] {
 }
 
 /**
- * Parse a project and write the result to .flowcanvas/flow-graph.json
+ * Parse a project and write the result to .mappd/flow-graph.json
  */
 export function parseAndWrite(projectDir: string, options?: ParseOptions): FlowGraph {
   const graph = parseProject(projectDir, options);
-  const outputDir = path.join(path.resolve(projectDir), '.flowcanvas');
+  const outputDir = path.join(path.resolve(projectDir), '.mappd');
 
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });

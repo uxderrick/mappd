@@ -21,7 +21,7 @@ export async function devCommand(options: DevOptions) {
     : await detectTargetPort(projectDir);
 
   console.log('');
-  console.log(pc.bold(pc.magenta('  ⬡ FlowCanvas')));
+  console.log(pc.bold(pc.magenta('  ⬡ Mappd')));
   console.log('');
 
   // Validate project directory
@@ -45,7 +45,7 @@ export async function devCommand(options: DevOptions) {
 
   // Step 2: Start the canvas server
   const canvasDir = path.resolve(import.meta.dirname, '../../canvas-dist');
-  const flowGraphDir = path.join(projectDir, '.flowcanvas');
+  const flowGraphDir = path.join(projectDir, '.mappd');
 
   const server = createServer({ port, flowGraphDir, canvasDir, targetPort });
 

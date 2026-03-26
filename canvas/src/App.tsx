@@ -49,7 +49,7 @@ interface FlowGraphJSON {
     projectName: string;
     framework: string;
     generatedAt: string;
-    flowcanvasVersion: string;
+    mappdVersion: string;
   };
 }
 
@@ -105,7 +105,7 @@ function AppInner() {
 
   // Fetch config from CLI server; fall back to defaults in standalone dev mode
   useEffect(() => {
-    fetch('/flowcanvas-config.json')
+    fetch('/mappd-config.json')
       .then(res => res.ok ? res.json() : null)
       .then(cfg => setConfig(cfg ?? { targetPort: 5173, wsPort: 4200 }))
       .catch(() => setConfig({ targetPort: 5173, wsPort: 4200 }));
@@ -254,7 +254,7 @@ function AppInner() {
   if (error) {
     return (
       <div style={{ color: '#ef4444', padding: 40, fontFamily: "'SF Mono', 'JetBrains Mono', monospace", background: '#09090b', height: '100%' }}>
-        <h2 style={{ color: '#e4e4e7', fontWeight: 500, fontSize: 16 }}>FlowCanvas Error</h2>
+        <h2 style={{ color: '#e4e4e7', fontWeight: 500, fontSize: 16 }}>Mappd Error</h2>
         <p style={{ fontSize: 13, marginTop: 8 }}>{error}</p>
         <p style={{ color: '#52525b', marginTop: 16, fontSize: 12 }}>
           Run the parser first: <code style={{ color: '#a78bfa' }}>cd parser && npm test</code>

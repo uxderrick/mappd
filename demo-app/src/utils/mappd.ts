@@ -1,7 +1,7 @@
-export function isFlowCanvasMode(): boolean {
+export function isMappdMode(): boolean {
   if (typeof window === 'undefined') return false;
   const params = new URLSearchParams(window.location.search);
-  return params.get('flowcanvas') === 'true';
+  return params.get('mappd') === 'true';
 }
 
 function closestAnchor(el: EventTarget | null): HTMLAnchorElement | null {
@@ -18,7 +18,7 @@ function isInternalHref(href: string): boolean {
   }
 }
 
-export function setupFlowCanvasInterception(): void {
+export function setupMappdInterception(): void {
   // Intercept link clicks in capture phase to beat React Router
   document.addEventListener(
     'click',
@@ -41,7 +41,7 @@ export function setupFlowCanvasInterception(): void {
   );
 
   // Don't intercept form submissions globally — React components
-  // handle their own submissions via useFlowCanvasNavigate() which
+  // handle their own submissions via useMappdNavigate() which
   // sends the correct postMessage with the right destination path.
 
   // Forward wheel events to parent so canvas zoom works over iframes
@@ -73,7 +73,7 @@ export function setupFlowCanvasInterception(): void {
   });
 }
 
-export function flowCanvasNavigate(to: string, data?: Record<string, unknown>): void {
+export function mappdNavigate(to: string, data?: Record<string, unknown>): void {
   window.parent.postMessage(
     { type: 'fc-navigate', from: window.location.pathname, to, ...(data ? { data } : {}) },
     '*'

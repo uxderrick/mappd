@@ -69,7 +69,7 @@ export function buildFlowGraph(
       projectName: metadata.projectName,
       framework: metadata.framework,
       generatedAt: new Date().toISOString(),
-      flowcanvasVersion: '0.1.0',
+      mappdVersion: '0.1.0',
     },
   };
 }
