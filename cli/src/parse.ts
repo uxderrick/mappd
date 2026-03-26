@@ -1,4 +1,4 @@
-import { parseAndWrite, type FlowGraph } from '@mappd/parser';
+import { parseAndWrite, type FlowGraph } from 'mappd-parser';
 import pc from 'picocolors';
 
 export function parseAndWriteGraph(projectDir: string): FlowGraph | null {

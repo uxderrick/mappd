@@ -2,7 +2,7 @@ import puppeteer from 'puppeteer';
 import fs from 'node:fs';
 import path from 'node:path';
 import pc from 'picocolors';
-import type { FlowGraph } from '@mappd/parser';
+import type { FlowGraph } from 'mappd-parser';
 
 interface ScreenshotOptions {
   targetPort: number;
