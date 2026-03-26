@@ -10,6 +10,14 @@ export interface ParsedRoute {
   isOptionalCatchAll?: boolean;
   parentPath?: string;
   children?: ParsedRoute[];
+  /** Special Next.js App Router files present at this route segment */
+  specialFiles?: {
+    loading?: string;
+    error?: string;
+    globalError?: string;
+    notFound?: string;
+    template?: string;
+  };
 }
 
 export interface DetectedLink {

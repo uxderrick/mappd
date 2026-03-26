@@ -6,6 +6,23 @@ const PAGE_FILES = ['page.tsx', 'page.ts', 'page.jsx', 'page.js'];
 const LAYOUT_FILES = ['layout.tsx', 'layout.ts', 'layout.jsx', 'layout.js'];
 const ROUTE_FILES = ['route.tsx', 'route.ts', 'route.jsx', 'route.js'];
 const DEFAULT_FILES = ['default.tsx', 'default.ts', 'default.jsx', 'default.js'];
+const TEMPLATE_FILES = ['template.tsx', 'template.ts', 'template.jsx', 'template.js'];
+const LOADING_FILES = ['loading.tsx', 'loading.ts', 'loading.jsx', 'loading.js'];
+const ERROR_FILES = ['error.tsx', 'error.ts', 'error.jsx', 'error.js'];
+const GLOBAL_ERROR_FILES = ['global-error.tsx', 'global-error.ts', 'global-error.jsx', 'global-error.js'];
+const NOT_FOUND_FILES = ['not-found.tsx', 'not-found.ts', 'not-found.jsx', 'not-found.js'];
+
+// Metadata file conventions — these generate non-UI responses at specific URLs.
+// We skip them like route.ts (no page to render).
+const METADATA_FILES = [
+  'sitemap.ts', 'sitemap.js', 'sitemap.xml',
+  'robots.ts', 'robots.js', 'robots.txt',
+  'manifest.ts', 'manifest.js', 'manifest.json',
+  'icon.tsx', 'icon.ts', 'icon.jsx', 'icon.js',
+  'apple-icon.tsx', 'apple-icon.ts', 'apple-icon.jsx', 'apple-icon.js',
+  'opengraph-image.tsx', 'opengraph-image.ts', 'opengraph-image.jsx', 'opengraph-image.js',
+  'twitter-image.tsx', 'twitter-image.ts', 'twitter-image.jsx', 'twitter-image.js',
+];
 
 /**
  * Extract routes from a Next.js App Router project by scanning the /app directory.
@@ -33,8 +50,34 @@ function scanDirectory(
   // but intentionally do NOT push a route node for it.
   // (No code needed here; we just don't scan DEFAULT_FILES for route creation.)
 
-  // Check for page file in this directory (skip if this dir is an API route)
-  if (!hasRouteFile) {
+  // Skip metadata files (sitemap.ts, robots.ts, etc.) — they generate non-UI responses
+  const hasMetadataFile = METADATA_FILES.some((f) => fs.existsSync(path.join(dir, f)));
+
+  // Detect special files at this segment
+  const specialFiles: ParsedRoute['specialFiles'] = {};
+  const findFile = (files: string[]): string | undefined => {
+    for (const f of files) {
+      const fp = path.join(dir, f);
+      if (fs.existsSync(fp)) return fp;
+    }
+    return undefined;
+  };
+  const loadingFile = findFile(LOADING_FILES);
+  const errorFile = findFile(ERROR_FILES);
+  const globalErrorFile = findFile(GLOBAL_ERROR_FILES);
+  const notFoundFile = findFile(NOT_FOUND_FILES);
+  const templateFile = findFile(TEMPLATE_FILES);
+
+  if (loadingFile) specialFiles.loading = loadingFile;
+  if (errorFile) specialFiles.error = errorFile;
+  if (globalErrorFile) specialFiles.globalError = globalErrorFile;
+  if (notFoundFile) specialFiles.notFound = notFoundFile;
+  if (templateFile) specialFiles.template = templateFile;
+
+  const hasSpecialFiles = Object.keys(specialFiles).length > 0;
+
+  // Check for page file in this directory (skip if this dir is an API route or metadata)
+  if (!hasRouteFile && !hasMetadataFile) {
     for (const pageFile of PAGE_FILES) {
       const pagePath = path.join(dir, pageFile);
       if (fs.existsSync(pagePath)) {
@@ -49,14 +92,15 @@ function scanDirectory(
           isLayout: false,
           isOptionalCatchAll,
           parentPath: getParentPath(routePath),
+          ...(hasSpecialFiles ? { specialFiles } : {}),
         });
         break;
       }
     }
   }
 
-  // Check for layout file (skip if this dir is an API route)
-  if (!hasRouteFile) {
+  // Check for layout file (skip if this dir is an API route or metadata)
+  if (!hasRouteFile && !hasMetadataFile) {
     for (const layoutFile of LAYOUT_FILES) {
       const layoutPath = path.join(dir, layoutFile);
       if (fs.existsSync(layoutPath) && routePath !== '') {
@@ -70,11 +114,16 @@ function scanDirectory(
           isIndex: false,
           isLayout: true,
           parentPath: getParentPath(routePath),
+          ...(hasSpecialFiles ? { specialFiles } : {}),
         });
         break;
       }
     }
   }
+
+  // Check for default.tsx — parallel route fallback (acknowledged but not a route node)
+  // We scan it for navigation links that might be relevant edges.
+  const _hasDefaultFile = DEFAULT_FILES.some((f) => fs.existsSync(path.join(dir, f)));
 
   // Recurse into subdirectories
   for (const entry of entries) {

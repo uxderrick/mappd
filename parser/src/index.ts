@@ -254,6 +254,148 @@ function scanMiddlewareFiles(
   return links;
 }
 
+// ===== Scan Server Action files for redirect() calls =====
+
+function scanServerActionFiles(
+  projectDir: string,
+  routeHelpers?: Map<string, string>,
+): DetectedLink[] {
+  const links: DetectedLink[] = [];
+  const srcDirs = [
+    path.join(projectDir, 'src'),
+    path.join(projectDir, 'app'),
+    path.join(projectDir, 'src', 'app'),
+    path.join(projectDir, 'src', 'actions'),
+    path.join(projectDir, 'src', 'lib'),
+    path.join(projectDir, 'actions'),
+    path.join(projectDir, 'lib'),
+  ];
+
+  for (const dir of srcDirs) {
+    if (!fs.existsSync(dir)) continue;
+    scanDirForServerActions(dir, links, routeHelpers);
+  }
+
+  return links;
+}
+
+function scanDirForServerActions(
+  dir: string,
+  links: DetectedLink[],
+  routeHelpers?: Map<string, string>,
+): void {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      if (entry.name === 'node_modules' || entry.name === '.next') continue;
+      scanDirForServerActions(fullPath, links, routeHelpers);
+      continue;
+    }
+
+    const ext = path.extname(entry.name);
+    if (!['.ts', '.tsx', '.js', '.jsx'].includes(ext)) continue;
+
+    try {
+      const content = fs.readFileSync(fullPath, 'utf-8');
+      // Check if file has 'use server' directive
+      if (!content.includes("'use server'") && !content.includes('"use server"')) continue;
+      // Check if it contains redirect calls
+      if (!content.includes('redirect') && !content.includes('permanentRedirect')) continue;
+
+      const detected = detectLinks(fullPath, '/', routeHelpers);
+      links.push(...detected);
+    } catch {
+      // Skip unreadable files
+    }
+  }
+}
+
+// ===== Pages Router: Scan getServerSideProps/getStaticProps for redirects =====
+
+function scanPagesRouterRedirects(
+  routes: import('./types.js').ParsedRoute[],
+  routeHelpers?: Map<string, string>,
+): DetectedLink[] {
+  const links: DetectedLink[] = [];
+
+  for (const route of routes) {
+    if (!route.componentFilePath) continue;
+
+    try {
+      const ast = parseFile(route.componentFilePath);
+
+      traverse(ast, {
+        // Look for: return { redirect: { destination: '/path' } }
+        ObjectProperty(nodePath: any) {
+          const key = nodePath.node.key;
+          if (!t.isIdentifier(key) || key.name !== 'redirect') return;
+          if (!t.isObjectExpression(nodePath.node.value)) return;
+
+          // Check we're inside getServerSideProps or getStaticProps
+          let isInSSRFunction = false;
+          let parent = nodePath.parentPath;
+          while (parent) {
+            if (parent.node.type === 'FunctionDeclaration' || parent.node.type === 'VariableDeclarator') {
+              const fnNode = parent.node;
+              const fnName = t.isFunctionDeclaration(fnNode) ? fnNode.id?.name :
+                t.isVariableDeclarator(fnNode) && t.isIdentifier(fnNode.id) ? fnNode.id.name : null;
+              if (fnName === 'getServerSideProps' || fnName === 'getStaticProps') {
+                isInSSRFunction = true;
+                break;
+              }
+            }
+            // Also check for exported function: export async function getServerSideProps
+            if (parent.node.type === 'ExportNamedDeclaration') {
+              const decl = parent.node.declaration;
+              if (t.isFunctionDeclaration(decl)) {
+                const fnName = decl.id?.name;
+                if (fnName === 'getServerSideProps' || fnName === 'getStaticProps') {
+                  isInSSRFunction = true;
+                  break;
+                }
+              }
+            }
+            parent = parent.parentPath;
+          }
+
+          if (!isInSSRFunction) return;
+
+          // Extract destination from redirect object
+          const redirectObj = nodePath.node.value;
+          for (const prop of redirectObj.properties) {
+            if (
+              t.isObjectProperty(prop) &&
+              t.isIdentifier(prop.key) &&
+              prop.key.name === 'destination' &&
+              t.isStringLiteral(prop.value)
+            ) {
+              const destination = prop.value.value;
+              if (destination.startsWith('/')) {
+                links.push({
+                  sourceFilePath: route.componentFilePath,
+                  sourceRoutePath: route.path,
+                  sourceLine: prop.loc?.start.line ?? 0,
+                  sourceColumn: prop.loc?.start.column ?? 0,
+                  triggerType: 'programmatic',
+                  targetPath: destination,
+                  labelHint: `SSR Redirect: ${destination}`,
+                });
+              }
+            }
+          }
+        },
+      });
+    } catch {
+      // Skip files that can't be parsed
+    }
+  }
+
+  return links;
+}
+
 // ===== Next.js config parsing =====
 
 interface NextConfig {

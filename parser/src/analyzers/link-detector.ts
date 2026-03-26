@@ -10,10 +10,8 @@ import type { DetectedLink } from '../types.js';
  * Scan a component file for navigation calls and return detected links.
  * Optionally accepts a routeHelpers map resolved from a centralized routes file.
  *
- * NOTE on relative paths: Paths like '../settings' or './edit' are currently
- * skipped because resolving them requires knowing the current route's position
- * in the route tree, which we don't have at static-analysis time. This is a
- * known limitation — we only detect absolute paths (starting with '/').
+ * Supports both absolute paths ('/dashboard') and relative paths ('../settings', './edit', '..').
+ * Relative paths are resolved against the source route's position in the route tree.
  */
 export function detectLinks(
   filePath: string,
@@ -97,7 +95,7 @@ export function detectLinks(
 
       if (!t.isJSXIdentifier(name)) return;
 
-      // --- Gap 1: <Navigate to="..." /> ---
+      // --- <Navigate to="..." /> ---
       if (name.name === 'Navigate') {
         const toAttr = nodePath.node.attributes.find(
           (a): a is t.JSXAttribute =>
@@ -107,8 +105,9 @@ export function detectLinks(
         );
         if (!toAttr) return;
 
-        const targetPath = extractValueFromAttr(toAttr.value, routeHelpers);
-        if (!targetPath || !targetPath.startsWith('/')) return;
+        const rawTarget = extractValueFromAttr(toAttr.value, routeHelpers);
+        const targetPath = normalizePath(rawTarget, routePath);
+        if (!targetPath) return;
 
         links.push({
           sourceFilePath: filePath,
@@ -144,8 +143,9 @@ export function detectLinks(
         );
         if (!actionAttr) return;
 
-        const targetPath = extractValueFromAttr(actionAttr.value, routeHelpers);
-        if (!targetPath || !targetPath.startsWith('/')) return;
+        const rawFormTarget = extractValueFromAttr(actionAttr.value, routeHelpers);
+        const formTargetPath = normalizePath(rawFormTarget, routePath);
+        if (!formTargetPath) return;
 
         links.push({
           sourceFilePath: filePath,
@@ -153,13 +153,13 @@ export function detectLinks(
           sourceLine: nodePath.node.loc?.start.line ?? 0,
           sourceColumn: nodePath.node.loc?.start.column ?? 0,
           triggerType: 'programmatic',
-          targetPath,
-          labelHint: `Form: ${targetPath}`,
+          targetPath: formTargetPath,
+          labelHint: `Form: ${formTargetPath}`,
         });
         return;
       }
 
-      // --- Existing: <Link>, <NavLink>, <a> ---
+      // --- <Link>, <NavLink>, <a> ---
       let attrNames: string[] = [];
       if (name.name === 'Link' || name.name === 'NavLink') {
         attrNames = ['to', 'href'];
@@ -176,8 +176,9 @@ export function detectLinks(
       );
       if (!attr) return;
 
-      const targetPath = extractValueFromAttr(attr.value, routeHelpers);
-      if (!targetPath || !targetPath.startsWith('/')) return;
+      const rawLinkTarget = extractValueFromAttr(attr.value, routeHelpers);
+      const targetPath = normalizePath(rawLinkTarget, routePath);
+      if (!targetPath) return;
 
       const parent = nodePath.parentPath;
       let labelHint = `Link: ${targetPath}`;
@@ -206,9 +207,8 @@ export function detectLinks(
     CallExpression(nodePath) {
       const callee = nodePath.node.callee;
 
-      // --- Gap 5: submit(data, { action: '/path' }) ---
+      // --- submit(data, { action: '/path' }) ---
       if (t.isIdentifier(callee) && submitVars.has(callee.name)) {
-        // The action is in the second argument's 'action' property
         const secondArg = nodePath.node.arguments[1];
         if (secondArg && t.isObjectExpression(secondArg)) {
           const actionProp = secondArg.properties.find(
@@ -218,16 +218,17 @@ export function detectLinks(
               p.key.name === 'action',
           );
           if (actionProp) {
-            const targetPath = extractPathFromNode(actionProp.value, routeHelpers);
-            if (targetPath && targetPath.startsWith('/')) {
+            const rawTarget = extractPathFromNode(actionProp.value, routeHelpers);
+            const resolved = normalizePath(rawTarget, routePath);
+            if (resolved) {
               links.push({
                 sourceFilePath: filePath,
                 sourceRoutePath: routePath,
                 sourceLine: nodePath.node.loc?.start.line ?? 0,
                 sourceColumn: nodePath.node.loc?.start.column ?? 0,
                 triggerType: 'programmatic',
-                targetPath,
-                labelHint: `Submit: ${targetPath}`,
+                targetPath: resolved,
+                labelHint: `Submit: ${resolved}`,
               });
             }
           }
@@ -235,7 +236,7 @@ export function detectLinks(
         return;
       }
 
-      // --- Gap 2 & 3: redirect() / permanentRedirect() / redirectDocument() / replace() ---
+      // --- redirect() / permanentRedirect() / redirectDocument() / replace() ---
       const redirectIdentifiers = new Set([
         'redirect',
         'permanentRedirect',
@@ -245,8 +246,9 @@ export function detectLinks(
       if (t.isIdentifier(callee) && redirectIdentifiers.has(callee.name)) {
         if (nodePath.node.arguments.length === 0) return;
         const firstArg = nodePath.node.arguments[0];
-        const targetPath = extractPathFromNode(firstArg, routeHelpers);
-        if (!targetPath || !targetPath.startsWith('/')) return;
+        const rawTarget = extractPathFromNode(firstArg, routeHelpers);
+        const resolved = normalizePath(rawTarget, routePath);
+        if (!resolved) return;
 
         links.push({
           sourceFilePath: filePath,
@@ -254,13 +256,13 @@ export function detectLinks(
           sourceLine: nodePath.node.loc?.start.line ?? 0,
           sourceColumn: nodePath.node.loc?.start.column ?? 0,
           triggerType: 'programmatic',
-          targetPath,
-          labelHint: `Redirect: ${targetPath}`,
+          targetPath: resolved,
+          labelHint: `Redirect: ${resolved}`,
         });
         return;
       }
 
-      // --- Gap 6: window.history.pushState() / window.history.replaceState() ---
+      // --- window.history.pushState() / window.history.replaceState() ---
       if (
         t.isMemberExpression(callee) &&
         t.isIdentifier(callee.property) &&
@@ -271,26 +273,26 @@ export function detectLinks(
         t.isIdentifier(callee.object.property) &&
         callee.object.property.name === 'history'
       ) {
-        // pushState/replaceState signature: (state, unused, url)
         const thirdArg = nodePath.node.arguments[2];
         if (thirdArg) {
-          const targetPath = extractPathFromNode(thirdArg, routeHelpers);
-          if (targetPath && targetPath.startsWith('/')) {
+          const rawTarget = extractPathFromNode(thirdArg, routeHelpers);
+          const resolved = normalizePath(rawTarget, routePath);
+          if (resolved) {
             links.push({
               sourceFilePath: filePath,
               sourceRoutePath: routePath,
               sourceLine: nodePath.node.loc?.start.line ?? 0,
               sourceColumn: nodePath.node.loc?.start.column ?? 0,
               triggerType: 'programmatic',
-              targetPath,
-              labelHint: `Navigate: ${targetPath}`,
+              targetPath: resolved,
+              labelHint: `Navigate: ${resolved}`,
             });
           }
         }
         return;
       }
 
-      // --- Gap 7: router.prefetch('/path') ---
+      // --- router.prefetch('/path') ---
       if (
         t.isMemberExpression(callee) &&
         t.isIdentifier(callee.object) &&
@@ -300,8 +302,9 @@ export function detectLinks(
       ) {
         if (nodePath.node.arguments.length === 0) return;
         const firstArg = nodePath.node.arguments[0];
-        const targetPath = extractPathFromNode(firstArg, routeHelpers);
-        if (!targetPath || !targetPath.startsWith('/')) return;
+        const rawTarget = extractPathFromNode(firstArg, routeHelpers);
+        const resolved = normalizePath(rawTarget, routePath);
+        if (!resolved) return;
 
         links.push({
           sourceFilePath: filePath,
@@ -309,13 +312,13 @@ export function detectLinks(
           sourceLine: nodePath.node.loc?.start.line ?? 0,
           sourceColumn: nodePath.node.loc?.start.column ?? 0,
           triggerType: 'link',
-          targetPath,
-          labelHint: `Prefetch: ${targetPath}`,
+          targetPath: resolved,
+          labelHint: `Prefetch: ${resolved}`,
         });
         return;
       }
 
-      // --- Gap 5: fetcher.load('/path') ---
+      // --- fetcher.load('/path') ---
       if (
         t.isMemberExpression(callee) &&
         t.isIdentifier(callee.object) &&
@@ -324,22 +327,23 @@ export function detectLinks(
         callee.property.name === 'load'
       ) {
         const firstArg = nodePath.node.arguments[0];
-        const targetPath = extractPathFromNode(firstArg, routeHelpers);
-        if (targetPath && targetPath.startsWith('/')) {
+        const rawTarget = extractPathFromNode(firstArg, routeHelpers);
+        const resolved = normalizePath(rawTarget, routePath);
+        if (resolved) {
           links.push({
             sourceFilePath: filePath,
             sourceRoutePath: routePath,
             sourceLine: nodePath.node.loc?.start.line ?? 0,
             sourceColumn: nodePath.node.loc?.start.column ?? 0,
             triggerType: 'programmatic',
-            targetPath,
-            labelHint: `Fetcher: ${targetPath}`,
+            targetPath: resolved,
+            labelHint: `Fetcher: ${resolved}`,
           });
         }
         return;
       }
 
-      // --- Gap 5: fetcher.submit(data, { action: '/path' }) ---
+      // --- fetcher.submit(data, { action: '/path' }) ---
       if (
         t.isMemberExpression(callee) &&
         t.isIdentifier(callee.object) &&
@@ -352,16 +356,17 @@ export function detectLinks(
           if (t.isObjectExpression(opts)) {
             for (const prop of opts.properties) {
               if (t.isObjectProperty(prop) && t.isIdentifier(prop.key) && prop.key.name === 'action') {
-                const targetPath = extractPathFromNode(prop.value, routeHelpers);
-                if (targetPath && targetPath.startsWith('/')) {
+                const rawTarget = extractPathFromNode(prop.value, routeHelpers);
+                const resolved = normalizePath(rawTarget, routePath);
+                if (resolved) {
                   links.push({
                     sourceFilePath: filePath,
                     sourceRoutePath: routePath,
                     sourceLine: nodePath.node.loc?.start.line ?? 0,
                     sourceColumn: nodePath.node.loc?.start.column ?? 0,
                     triggerType: 'programmatic',
-                    targetPath,
-                    labelHint: `Fetcher: ${targetPath}`,
+                    targetPath: resolved,
+                    labelHint: `Fetcher: ${resolved}`,
                   });
                 }
               }
@@ -380,26 +385,26 @@ export function detectLinks(
         (callee.property.name === 'redirect' || callee.property.name === 'rewrite')
       ) {
         const firstArg = nodePath.node.arguments[0];
-        let targetPath: string | null = null;
+        let rawTarget: string | null = null;
 
-        // Direct string: NextResponse.redirect('/path')
-        targetPath = extractPathFromNode(firstArg, routeHelpers);
+        rawTarget = extractPathFromNode(firstArg, routeHelpers);
 
         // new URL('/path', request.url) pattern
-        if (!targetPath && t.isNewExpression(firstArg) && t.isIdentifier(firstArg.callee) && firstArg.callee.name === 'URL') {
+        if (!rawTarget && t.isNewExpression(firstArg) && t.isIdentifier(firstArg.callee) && firstArg.callee.name === 'URL') {
           const urlArg = firstArg.arguments[0];
-          targetPath = extractPathFromNode(urlArg, routeHelpers);
+          rawTarget = extractPathFromNode(urlArg, routeHelpers);
         }
 
-        if (targetPath && targetPath.startsWith('/')) {
+        const resolved = normalizePath(rawTarget, routePath);
+        if (resolved) {
           links.push({
             sourceFilePath: filePath,
             sourceRoutePath: routePath,
             sourceLine: nodePath.node.loc?.start.line ?? 0,
             sourceColumn: nodePath.node.loc?.start.column ?? 0,
             triggerType: 'programmatic',
-            targetPath,
-            labelHint: `${callee.property.name === 'redirect' ? 'Redirect' : 'Rewrite'}: ${targetPath}`,
+            targetPath: resolved,
+            labelHint: `${callee.property.name === 'redirect' ? 'Redirect' : 'Rewrite'}: ${resolved}`,
           });
         }
         return;
@@ -419,15 +424,13 @@ export function detectLinks(
         return;
       }
 
-      // --- Existing: navigate('/path') / router.push/replace('/path') ---
+      // --- navigate('/path') / router.push/replace('/path') ---
       let isNav = false;
 
-      // navigate('/path')
       if (t.isIdentifier(callee) && navigateVars.has(callee.name)) {
         isNav = true;
       }
 
-      // router.push('/path') or router.replace('/path')
       if (
         t.isMemberExpression(callee) &&
         t.isIdentifier(callee.object) &&
@@ -438,7 +441,7 @@ export function detectLinks(
         isNav = true;
       }
 
-      // Also catch any *.push() as a fallback (covers untracked router vars)
+      // Fallback: catch any *.push() (covers untracked router vars)
       if (
         !isNav &&
         t.isMemberExpression(callee) &&
@@ -451,8 +454,9 @@ export function detectLinks(
       if (!isNav || nodePath.node.arguments.length === 0) return;
 
       const firstArg = nodePath.node.arguments[0];
-      const targetPath = extractPathFromNode(firstArg, routeHelpers);
-      if (!targetPath || !targetPath.startsWith('/')) return;
+      const rawTarget = extractPathFromNode(firstArg, routeHelpers);
+      const resolvedNav = normalizePath(rawTarget, routePath);
+      if (!resolvedNav) return;
 
       links.push({
         sourceFilePath: filePath,
@@ -460,8 +464,8 @@ export function detectLinks(
         sourceLine: nodePath.node.loc?.start.line ?? 0,
         sourceColumn: nodePath.node.loc?.start.column ?? 0,
         triggerType: 'programmatic',
-        targetPath,
-        labelHint: `Navigate: ${targetPath}`,
+        targetPath: resolvedNav,
+        labelHint: `Navigate: ${resolvedNav}`,
       });
     },
 
@@ -606,12 +610,27 @@ function extractPathFromNode(
   }
 
   // Object form: { pathname: '/about', query: {...} } or { pathname: '/users', search: '?q=test' }
+  // Also handles Next.js Link: { pathname: '/blog/[slug]', query: { slug: 'hello' } }
   if (t.isObjectExpression(node)) {
     for (const prop of node.properties) {
       if (
         t.isObjectProperty(prop) &&
         t.isIdentifier(prop.key) &&
-        prop.key.name === 'pathname' &&
+        prop.key.name === 'pathname'
+      ) {
+        if (t.isStringLiteral(prop.value)) {
+          return prop.value.value;
+        }
+        // pathname could be a template literal
+        if (t.isTemplateLiteral(prop.value)) {
+          return extractPathFromNode(prop.value, routeHelpers);
+        }
+      }
+      // Also check 'to' property (React Router object form)
+      if (
+        t.isObjectProperty(prop) &&
+        t.isIdentifier(prop.key) &&
+        prop.key.name === 'to' &&
         t.isStringLiteral(prop.value)
       ) {
         return prop.value.value;
@@ -636,6 +655,78 @@ function memberExpressionToString(node: t.Node): string | null {
     const obj = memberExpressionToString(node.object);
     if (obj) return `${obj}.${node.property.name}`;
   }
+  return null;
+}
+
+/**
+ * Resolve a relative path against a source route path.
+ * Examples:
+ *   resolveRelativePath('/dashboard/users', '../settings') → '/dashboard/settings'
+ *   resolveRelativePath('/dashboard/users', './edit')      → '/dashboard/users/edit'
+ *   resolveRelativePath('/dashboard/users', '..')           → '/dashboard'
+ *   resolveRelativePath('/dashboard/users', '.')            → '/dashboard/users'
+ */
+function resolveRelativePath(sourceRoutePath: string, relativePath: string): string | null {
+  if (!relativePath) return null;
+  if (relativePath.startsWith('/')) return relativePath;
+
+  // Only resolve paths that look relative (., .., or start with ./ or ../)
+  if (!relativePath.startsWith('.')) return null;
+
+  const sourceParts = sourceRoutePath.split('/').filter(Boolean);
+  const relParts = relativePath.split('/');
+
+  // Start from the source path
+  const resolved = [...sourceParts];
+
+  for (const part of relParts) {
+    if (part === '.') {
+      // Current directory — no change
+      continue;
+    } else if (part === '..') {
+      // Go up one level
+      if (resolved.length > 0) {
+        resolved.pop();
+      }
+    } else {
+      // Add the segment
+      resolved.push(part);
+    }
+  }
+
+  return '/' + resolved.join('/');
+}
+
+/**
+ * Normalize a detected path — if absolute return as-is, if relative resolve against source route.
+ * Returns null if the path can't be resolved or is not a route path.
+ */
+function normalizePath(
+  detectedPath: string | null,
+  sourceRoutePath: string,
+): string | null {
+  if (!detectedPath) return null;
+
+  // Absolute paths
+  if (detectedPath.startsWith('/')) return detectedPath;
+
+  // Relative paths (., .., ./, ../)
+  if (detectedPath.startsWith('.')) {
+    return resolveRelativePath(sourceRoutePath, detectedPath);
+  }
+
+  // Bare segments like 'edit' — treat as relative to current route
+  // but only if they don't look like external URLs or fragments
+  if (
+    !detectedPath.includes(':') &&
+    !detectedPath.includes('#') &&
+    !detectedPath.includes('?') &&
+    !detectedPath.includes('//') &&
+    /^[a-zA-Z0-9_\-$]/.test(detectedPath)
+  ) {
+    return resolveRelativePath(sourceRoutePath, './' + detectedPath);
+  }
+
   return null;
 }
 

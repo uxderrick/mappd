@@ -2,15 +2,24 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { ParsedRoute } from '../types.js';
 
-const VALID_EXTENSIONS = ['.tsx', '.ts', '.jsx', '.js'];
+const DEFAULT_EXTENSIONS = ['.tsx', '.ts', '.jsx', '.js'];
 const SKIP_FILES = ['_app', '_document', '_error', '404', '500'];
 
 /**
  * Extract routes from a Next.js Pages Router project by scanning the /pages directory.
+ * Optionally accepts custom pageExtensions from next.config.
  */
-export function extractNextjsPagesRoutes(pagesDir: string): ParsedRoute[] {
+export function extractNextjsPagesRoutes(
+  pagesDir: string,
+  pageExtensions?: string[],
+): ParsedRoute[] {
+  // Build valid extensions list from pageExtensions config
+  const validExtensions = pageExtensions
+    ? pageExtensions.map((ext) => ext.startsWith('.') ? ext : `.${ext}`)
+    : DEFAULT_EXTENSIONS;
+
   const routes: ParsedRoute[] = [];
-  scanDirectory(pagesDir, '', pagesDir, routes);
+  scanDirectory(pagesDir, '', pagesDir, routes, validExtensions);
   return routes;
 }
 
@@ -19,6 +28,7 @@ function scanDirectory(
   routePath: string,
   pagesDir: string,
   routes: ParsedRoute[],
+  validExtensions: string[],
 ) {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
 
@@ -30,15 +40,16 @@ function scanDirectory(
       if (entry.name.startsWith('_')) continue;
 
       const childPath = buildRoutePath(routePath, entry.name);
-      scanDirectory(fullPath, childPath, pagesDir, routes);
+      scanDirectory(fullPath, childPath, pagesDir, routes, validExtensions);
       continue;
     }
 
     // Process files
     const ext = path.extname(entry.name);
-    if (!VALID_EXTENSIONS.includes(ext)) continue;
+    if (!validExtensions.includes(ext)) continue;
 
-    const baseName = path.basename(entry.name, ext);
+    // For custom pageExtensions like 'page.tsx', handle compound extensions
+    const baseName = getBaseName(entry.name, validExtensions);
     if (SKIP_FILES.includes(baseName)) continue;
 
     const fileRoutePath = baseName === 'index'
@@ -104,4 +115,21 @@ function getParentPath(routePath: string): string | undefined {
   const parts = routePath.split('/').filter(Boolean);
   if (parts.length <= 1) return '/';
   return '/' + parts.slice(0, -1).join('/');
+}
+
+/**
+ * Get the base name of a file, handling compound extensions like '.page.tsx'.
+ * For custom pageExtensions (e.g., ['page.tsx', 'page.ts']), strip the full compound extension.
+ */
+function getBaseName(fileName: string, validExtensions: string[]): string {
+  // Sort by length descending so compound extensions match first
+  const sorted = [...validExtensions].sort((a, b) => b.length - a.length);
+  for (const ext of sorted) {
+    const dotExt = ext.startsWith('.') ? ext : `.${ext}`;
+    if (fileName.endsWith(dotExt)) {
+      return fileName.slice(0, -dotExt.length);
+    }
+  }
+  // Fallback to standard extname
+  return path.basename(fileName, path.extname(fileName));
 }
