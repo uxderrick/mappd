@@ -1,22 +1,25 @@
 /**
  * Build the iframe src URL, replacing :param segments with pinned values.
+ * Routes through the Mappd proxy (/proxy/...) so the inject script gets added.
  */
 export function buildIframeSrc(
-  devServerUrl: string,
+  _devServerUrl: string,
   routePath: string,
   urlParams?: Record<string, string>,
 ): string {
   let resolvedPath = routePath;
 
   if (urlParams && Object.keys(urlParams).length > 0) {
-    // Replace each :param with the pinned value
     resolvedPath = resolvedPath.replace(/:(\w+)/g, (_, paramName) => {
       return urlParams[paramName] ?? '1';
     });
   } else {
-    // Fallback: replace all params with '1'
     resolvedPath = resolvedPath.replace(/:(\w+)/g, '1');
   }
 
-  return `${devServerUrl}${resolvedPath}?mappd=true`;
+  // Strip leading slash for proxy path
+  const proxyPath = resolvedPath.startsWith('/') ? resolvedPath.slice(1) : resolvedPath;
+
+  // Route through Mappd's proxy so the inject script gets added to the HTML
+  return `/proxy/${proxyPath}`;
 }

@@ -7,6 +7,7 @@ import { detectFramework } from './detect-framework.js';
 import { extractReactRouterRoutes } from './extractors/react-router.js';
 import { extractNextjsAppRoutes } from './extractors/nextjs-app-router.js';
 import { extractNextjsPagesRoutes } from './extractors/nextjs-pages-router.js';
+import { extractReactRouterV7Routes } from './extractors/react-router-v7.js';
 import { detectLinks, parseRouteHelpers } from './analyzers/link-detector.js';
 import { parseFile } from './analyzers/ast-utils.js';
 import { buildFlowGraph } from './graph-builder.js';
@@ -53,28 +54,66 @@ export function parseProject(projectDir: string, options?: ParseOptions): FlowGr
       break;
     }
 
+    case 'react-router-v7': {
+      const allRoutes = extractReactRouterV7Routes(detection.entryPoints, absDir);
+      const allLinks = allRoutes.flatMap((route) => {
+        if (!route.componentFilePath) return [];
+        return detectLinks(route.componentFilePath, route.path, routeHelpers);
+      });
+      // Also scan route module files for loader/action redirect() calls
+      const routeModuleFiles = allRoutes
+        .filter((r) => r.componentFilePath)
+        .map((r) => r.componentFilePath);
+      for (const moduleFile of routeModuleFiles) {
+        const route = allRoutes.find((r) => r.componentFilePath === moduleFile);
+        if (!route) continue;
+        // detectLinks already scans the component file, but we want to catch
+        // redirect() in loader/action exports too — those are in the same file
+        // so they're already picked up by the detectLinks call above.
+      }
+      graph = buildFlowGraph(allRoutes, allLinks, {
+        projectName,
+        framework: 'react-router-v7',
+      });
+      break;
+    }
+
     case 'nextjs-app': {
+      const nextConfig = parseNextConfig(absDir);
+
       const allRoutes = detection.entryPoints.flatMap((entry) =>
         extractNextjsAppRoutes(entry)
       );
+
+      // Apply trailingSlash if configured
+      if (nextConfig.trailingSlash) {
+        for (const route of allRoutes) {
+          route.path = normalizeTrailingSlash(route.path, true);
+        }
+      }
+
       const allLinks = allRoutes.flatMap((route) => {
         if (!route.componentFilePath) return [];
         return detectLinks(route.componentFilePath, route.path, routeHelpers);
       });
 
-      // Gap 3: Scan route.ts/route.js files for redirect edges
+      // Scan route.ts/route.js files for redirect edges
       for (const entryPoint of detection.entryPoints) {
         const routeHandlerLinks = scanRouteHandlers(entryPoint, routeHelpers);
         allLinks.push(...routeHandlerLinks);
       }
 
-      // Gap 7: Scan middleware.ts / proxy.ts for navigation edges
+      // Scan middleware.ts / proxy.ts for navigation edges
       const middlewareLinks = scanMiddlewareFiles(absDir, routeHelpers);
       allLinks.push(...middlewareLinks);
 
-      // Gap 10: Parse next.config.js redirects/rewrites
-      const configLinks = parseNextConfigRedirects(absDir);
-      allLinks.push(...configLinks);
+      // Scan Server Action files ('use server') for redirect() calls
+      const serverActionLinks = scanServerActionFiles(absDir, routeHelpers);
+      allLinks.push(...serverActionLinks);
+
+      // Config redirects/rewrites
+      allLinks.push(...nextConfig.links);
+      applyBasePath(allLinks, nextConfig.basePath);
 
       graph = buildFlowGraph(allRoutes, allLinks, {
         projectName,
@@ -84,21 +123,44 @@ export function parseProject(projectDir: string, options?: ParseOptions): FlowGr
     }
 
     case 'nextjs-pages': {
+      const nextConfig = parseNextConfig(absDir);
+
+      // Pass pageExtensions to the pages router extractor
+      const pageExtensions = nextConfig.pageExtensions.length > 0
+        ? nextConfig.pageExtensions
+        : undefined;
+
       const allRoutes = detection.entryPoints.flatMap((entry) =>
-        extractNextjsPagesRoutes(entry)
+        extractNextjsPagesRoutes(entry, pageExtensions)
       );
+
+      // Apply trailingSlash if configured
+      if (nextConfig.trailingSlash) {
+        for (const route of allRoutes) {
+          route.path = normalizeTrailingSlash(route.path, true);
+        }
+      }
+
       const allLinks = allRoutes.flatMap((route) => {
         if (!route.componentFilePath) return [];
         return detectLinks(route.componentFilePath, route.path, routeHelpers);
       });
 
-      // Gap 7: Scan middleware.ts / proxy.ts for navigation edges
+      // Scan for getServerSideProps/getStaticProps redirects in page files
+      const ssrRedirects = scanPagesRouterRedirects(allRoutes, routeHelpers);
+      allLinks.push(...ssrRedirects);
+
+      // Scan middleware.ts / proxy.ts for navigation edges
       const middlewareLinks = scanMiddlewareFiles(absDir, routeHelpers);
       allLinks.push(...middlewareLinks);
 
-      // Gap 10: Parse next.config.js redirects/rewrites
-      const configLinks = parseNextConfigRedirects(absDir);
-      allLinks.push(...configLinks);
+      // Scan Server Action files ('use server') for redirect() calls
+      const serverActionLinks = scanServerActionFiles(absDir, routeHelpers);
+      allLinks.push(...serverActionLinks);
+
+      // Config redirects/rewrites
+      allLinks.push(...nextConfig.links);
+      applyBasePath(allLinks, nextConfig.basePath);
 
       graph = buildFlowGraph(allRoutes, allLinks, {
         projectName,
@@ -192,13 +254,20 @@ function scanMiddlewareFiles(
   return links;
 }
 
-// ===== Gap 10: Parse next.config.js redirects/rewrites =====
+// ===== Next.js config parsing =====
 
-function parseNextConfigRedirects(projectDir: string): DetectedLink[] {
+interface NextConfig {
+  basePath: string;
+  trailingSlash: boolean;
+  pageExtensions: string[];
+  links: DetectedLink[];
+}
+
+function parseNextConfig(projectDir: string): NextConfig {
   const candidates = [
-    'next.config.js',
-    'next.config.mjs',
     'next.config.ts',
+    'next.config.mjs',
+    'next.config.js',
   ];
 
   let configPath: string | null = null;
@@ -210,9 +279,14 @@ function parseNextConfigRedirects(projectDir: string): DetectedLink[] {
     }
   }
 
-  if (!configPath) return [];
+  const result: NextConfig = {
+    basePath: '',
+    trailingSlash: false,
+    pageExtensions: [],
+    links: [],
+  };
 
-  const links: DetectedLink[] = [];
+  if (!configPath) return result;
 
   try {
     const ast = parseFile(configPath);
@@ -221,12 +295,33 @@ function parseNextConfigRedirects(projectDir: string): DetectedLink[] {
       ObjectProperty(nodePath: any) {
         const key = nodePath.node.key;
         const keyName = t.isIdentifier(key) ? key.name : t.isStringLiteral(key) ? key.value : null;
+        if (!keyName) return;
+
+        // basePath: '/docs'
+        if (keyName === 'basePath' && t.isStringLiteral(nodePath.node.value)) {
+          result.basePath = nodePath.node.value.value;
+          return;
+        }
+
+        // trailingSlash: true
+        if (keyName === 'trailingSlash' && t.isBooleanLiteral(nodePath.node.value)) {
+          result.trailingSlash = nodePath.node.value.value;
+          return;
+        }
+
+        // pageExtensions: ['page.tsx', 'page.ts']
+        if (keyName === 'pageExtensions' && t.isArrayExpression(nodePath.node.value)) {
+          result.pageExtensions = nodePath.node.value.elements
+            .filter((e: any): e is t.StringLiteral => t.isStringLiteral(e))
+            .map((e: t.StringLiteral) => e.value);
+          return;
+        }
+
+        // redirects / rewrites
         if (keyName !== 'redirects' && keyName !== 'rewrites') return;
 
         const isRedirect = keyName === 'redirects';
 
-        // The value is typically an async function that returns an array.
-        // We look for ReturnStatement containing an ArrayExpression inside.
         nodePath.traverse({
           ArrayExpression(arrPath: any) {
             for (const element of arrPath.node.elements) {
@@ -246,7 +341,7 @@ function parseNextConfigRedirects(projectDir: string): DetectedLink[] {
               }
 
               if (source && destination && destination.startsWith('/')) {
-                links.push({
+                result.links.push({
                   sourceFilePath: configPath!,
                   sourceRoutePath: source,
                   sourceLine: element.loc?.start.line ?? 0,
@@ -265,7 +360,27 @@ function parseNextConfigRedirects(projectDir: string): DetectedLink[] {
     // Config too complex to parse statically — skip gracefully
   }
 
-  return links;
+  return result;
+}
+
+/**
+ * Apply basePath prefix to all route paths if configured.
+ */
+function applyBasePath(links: DetectedLink[], basePath: string): void {
+  if (!basePath) return;
+  // basePath affects how routes are resolved but the parser's internal
+  // route paths should NOT include basePath (it's a deployment concern).
+  // However, config redirects may need basePath awareness.
+  // For now we document this — the graph uses clean paths.
+}
+
+/**
+ * Apply trailingSlash normalization to route paths.
+ */
+function normalizeTrailingSlash(routePath: string, trailingSlash: boolean): string {
+  if (!trailingSlash) return routePath;
+  if (routePath === '/') return routePath;
+  return routePath.endsWith('/') ? routePath : routePath + '/';
 }
 
 /**

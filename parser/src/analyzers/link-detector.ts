@@ -62,6 +62,39 @@ export function detectLinks(
     // Detect: <Form action="..." /> (form navigation)
     JSXOpeningElement(nodePath) {
       const name = nodePath.node.name;
+
+      // Handle JSXMemberExpression: <fetcher.Form action="...">
+      if (t.isJSXMemberExpression(name)) {
+        if (
+          t.isJSXIdentifier(name.object) &&
+          fetcherVars.has(name.object.name) &&
+          t.isJSXIdentifier(name.property) &&
+          name.property.name === 'Form'
+        ) {
+          const actionAttr = nodePath.node.attributes.find(
+            (a): a is t.JSXAttribute =>
+              t.isJSXAttribute(a) &&
+              t.isJSXIdentifier(a.name) &&
+              a.name.name === 'action',
+          );
+          if (actionAttr) {
+            const targetPath = extractValueFromAttr(actionAttr.value, routeHelpers);
+            if (targetPath && targetPath.startsWith('/')) {
+              links.push({
+                sourceFilePath: filePath,
+                sourceRoutePath: routePath,
+                sourceLine: nodePath.node.loc?.start.line ?? 0,
+                sourceColumn: nodePath.node.loc?.start.column ?? 0,
+                triggerType: 'programmatic',
+                targetPath,
+                labelHint: `Fetcher Form: ${targetPath}`,
+              });
+            }
+          }
+        }
+        return;
+      }
+
       if (!t.isJSXIdentifier(name)) return;
 
       // --- Gap 1: <Navigate to="..." /> ---
@@ -89,7 +122,7 @@ export function detectLinks(
         return;
       }
 
-      // --- Gap 4: <Form action="..." /> ---
+      // --- fetcher.Form / Form action="..." ---
       if (name.name === 'Form') {
         // Skip fetcher forms (navigate={false})
         const navigateFalseAttr = nodePath.node.attributes.find(

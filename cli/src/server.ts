@@ -46,6 +46,71 @@ export function createServer(options: ServerOptions) {
     });
   });
 
+  // Serve the inject script
+  app.get('/mappd-inject.js', (_req, res) => {
+    const scriptPath = path.join(canvasDir, 'mappd-inject.js');
+    if (fs.existsSync(scriptPath)) {
+      res.setHeader('Content-Type', 'application/javascript');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.sendFile(scriptPath);
+    } else {
+      // Fallback: serve inline inject script
+      res.setHeader('Content-Type', 'application/javascript');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.send('/* mappd-inject.js not found */');
+    }
+  });
+
+  // Proxy route: /proxy/* fetches from target dev server and injects mappd script
+  // Iframes should point here instead of directly at the target
+  app.get('/proxy/*', async (req, res) => {
+    const targetPath = req.params[0] || '';
+    const targetUrl = `http://localhost:${targetPort}/${targetPath}`;
+
+    try {
+      const response = await fetch(targetUrl, {
+        headers: { 'Accept': req.headers.accept || '*/*' },
+      });
+
+      const contentType = response.headers.get('content-type') || '';
+
+      // Only inject into HTML responses
+      if (contentType.includes('text/html')) {
+        let html = await response.text();
+
+        // Inject our script before </head> or </body>
+        const injectTag = `<script src="http://localhost:${port}/mappd-inject.js"></script>`;
+        if (html.includes('</head>')) {
+          html = html.replace('</head>', injectTag + '</head>');
+        } else if (html.includes('</body>')) {
+          html = html.replace('</body>', injectTag + '</body>');
+        } else {
+          html = html + injectTag;
+        }
+
+        // Add base tag so relative asset URLs resolve to the target server
+        if (!html.includes('<base')) {
+          const baseTag = `<base href="http://localhost:${targetPort}/">`;
+          if (html.includes('<head>')) {
+            html = html.replace('<head>', '<head>' + baseTag);
+          } else if (html.includes('<head ')) {
+            html = html.replace(/<head[^>]*>/, '$&' + baseTag);
+          }
+        }
+
+        res.setHeader('Content-Type', 'text/html');
+        res.send(html);
+      } else {
+        // Non-HTML: pipe through as-is
+        res.setHeader('Content-Type', contentType);
+        const buffer = await response.arrayBuffer();
+        res.send(Buffer.from(buffer));
+      }
+    } catch (err) {
+      res.status(502).send(`Proxy error: ${err instanceof Error ? err.message : err}`);
+    }
+  });
+
   // Serve the canvas app (built static files)
   // For development, we'll proxy to the canvas dev server instead
   if (fs.existsSync(canvasDir)) {

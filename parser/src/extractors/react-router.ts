@@ -262,9 +262,11 @@ function parseRouteObject(
     componentName,
     componentFilePath,
     // GAP FIX #2 — Splat routes: `*` anywhere in the path means dynamic
+    // Also detect optional segments (:param?)
     isDynamic: fullPath.includes(':') || fullPath.includes('*'),
     isIndex,
     isLayout: isLayoutWrapper || children.length > 0,
+    isOptionalCatchAll: fullPath.includes('?'),
     parentPath: parentPath || undefined,
     children: children.length > 0 ? children : undefined,
   };
