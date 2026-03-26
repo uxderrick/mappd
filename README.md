@@ -5,6 +5,7 @@ See your entire React app at once. Stop clicking through screens.
 FlowCanvas renders every route in your application on an infinite canvas, connected by auto-detected navigation flows. It is a localhost dev tool for React developers who are tired of manually navigating through their apps to reach deep screens.
 
 <!-- TODO: Add screenshot/GIF of canvas -->
+<img width="3068" height="2096" alt="image" src="https://github.com/user-attachments/assets/fffb479e-c595-4a6b-a46b-f6d2e234113a" />
 
 ---
 
