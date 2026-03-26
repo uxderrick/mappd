@@ -11,6 +11,35 @@ const ROUTER_ENTRY_CANDIDATES = [
 ];
 
 export function detectFramework(projectDir: string): FrameworkDetection {
+  // Try direct detection first, then monorepo sub-apps
+  const direct = tryDetectFramework(projectDir);
+  if (direct) return direct;
+
+  // Monorepo: scan apps/*/ and packages/*/ for sub-projects
+  const monorepoGlobs = ['apps', 'packages'];
+  for (const dir of monorepoGlobs) {
+    const appsDir = path.join(projectDir, dir);
+    if (!fs.existsSync(appsDir)) continue;
+
+    const entries = fs.readdirSync(appsDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const subDir = path.join(appsDir, entry.name);
+      const result = tryDetectFramework(subDir);
+      if (result) {
+        // Prefix entry points with the sub-app path
+        return result;
+      }
+    }
+  }
+
+  throw new Error(
+    'Could not detect routing framework. Mappd supports React Router v6+ and Next.js.\n' +
+    'If this is a monorepo, make sure --dir points to the app directory (e.g., --dir apps/dashboard).'
+  );
+}
+
+function tryDetectFramework(projectDir: string): FrameworkDetection | null {
   // Check for Next.js
   const nextConfigs = ['next.config.js', 'next.config.mjs', 'next.config.ts'];
   const isNextjs = nextConfigs.some((f) => fs.existsSync(path.join(projectDir, f)));
@@ -35,7 +64,7 @@ export function detectFramework(projectDir: string): FrameworkDetection {
       };
     }
 
-    throw new Error('Next.js project detected but no /app or /pages directory found.');
+    return null;
   }
 
   // Check for React Router in package.json
@@ -45,7 +74,6 @@ export function detectFramework(projectDir: string): FrameworkDetection {
     const deps = { ...pkg.dependencies, ...pkg.devDependencies };
 
     if (deps['react-router-dom'] || deps['react-router']) {
-      // Find entry file that contains router setup
       const entryPoints: string[] = [];
 
       for (const candidate of ROUTER_ENTRY_CANDIDATES) {
@@ -65,7 +93,6 @@ export function detectFramework(projectDir: string): FrameworkDetection {
       }
 
       if (entryPoints.length === 0) {
-        // Fallback: just use the first existing candidate
         for (const candidate of ROUTER_ENTRY_CANDIDATES) {
           const fullPath = path.join(projectDir, candidate);
           if (fs.existsSync(fullPath)) {
@@ -79,7 +106,5 @@ export function detectFramework(projectDir: string): FrameworkDetection {
     }
   }
 
-  throw new Error(
-    'Could not detect routing framework. Mappd supports React Router v6+ and Next.js.'
-  );
+  return null;
 }
