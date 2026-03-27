@@ -83,6 +83,7 @@ interface BaseNodeData {
 function adaptGraph(graph: FlowGraphJSON): {
   baseNodes: (Node<BaseNodeData>)[];
   edges: Edge[];
+  stateScreens: StateScreenInfo[];
 } {
   const baseNodes = graph.nodes.map((n) => ({
     id: n.id,
@@ -167,7 +168,7 @@ function AppInner() {
 
   const [config, setConfig] = useState<{ targetPort: number; wsPort: number } | null>(null);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
-  const [graphData, setGraphData] = useState<{ baseNodes: Node<BaseNodeData>[]; edges: Edge[]; stateScreens: StateScreenInfo[] } | null>(null);
+  const [graphData, setGraphData] = useState<{ baseNodes: Node<BaseNodeData>[]; edges: Edge[]; stateScreens: StateScreenInfo[]; framework?: string } | null>(null);
   const [screenshots, setScreenshots] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [viewportPreset, setViewportPreset] = useState<ViewportPreset>('desktop');
@@ -241,7 +242,7 @@ function AppInner() {
         return res.json();
       })
       .then((graph: FlowGraphJSON) => {
-        setGraphData(adaptGraph(graph));
+        setGraphData({ ...adaptGraph(graph), framework: graph.metadata?.framework });
       })
       .catch((err) => {
         setError(err.message);
@@ -367,14 +368,13 @@ function AppInner() {
             onDoubleClick: handleDoubleClickNode,
             onRequestLoad: handleRequestLoad,
             onIframeLoaded: handleIframeLoaded,
-            devToolsState: getStateForNode(node.id),
-            onClearConsole: clearConsole,
-            onClearNetwork: clearNetwork,
-            onRequestStorage: requestStorage,
+            // DevTools state intentionally excluded from node data to prevent
+            // re-renders that would remount iframes. The right panel reads
+            // DevTools state directly via getStateForNode(activeNodeId).
           },
         };
       }),
-    [activeNodeId, baseNodes, screenshots, zoom, devServerUrl, shouldLoad, getPinForNode, hasPinForNode, handleRequestLoad, handleIframeLoaded, handleDoubleClickNode, vpDims, getStateForNode, clearConsole, clearNetwork, requestStorage, liveOverrides, reloadKeys, showLabels]
+    [activeNodeId, baseNodes, screenshots, zoom, devServerUrl, shouldLoad, getPinForNode, hasPinForNode, handleRequestLoad, handleIframeLoaded, handleDoubleClickNode, vpDims, liveOverrides, reloadKeys, showLabels]
   );
 
   const edges = useMemo(
@@ -548,6 +548,7 @@ function AppInner() {
         screenCount={baseNodes.length}
         connectionCount={baseEdges.length}
         devServerUrl={devServerUrl}
+        framework={graphData?.framework}
       />
     </div>
   );

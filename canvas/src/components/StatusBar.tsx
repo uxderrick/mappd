@@ -5,12 +5,21 @@ interface StatusBarProps {
   screenCount: number;
   connectionCount: number;
   devServerUrl: string;
+  framework?: string;
 }
+
+const FRAMEWORK_LABELS: Record<string, string> = {
+  'react-router': 'React Router',
+  'react-router-v7': 'React Router v7',
+  'nextjs-app': 'Next.js App',
+  'nextjs-pages': 'Next.js Pages',
+};
 
 export default function StatusBar({
   screenCount,
   connectionCount,
   devServerUrl,
+  framework,
 }: StatusBarProps) {
   const [serverOnline, setServerOnline] = useState<boolean | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -58,6 +67,12 @@ export default function StatusBar({
             <ArrowsLeftRight size={11} />
             {connectionCount} connection{connectionCount !== 1 ? 's' : ''}
           </span>
+          {framework && (
+            <>
+              <span className="fc-sb-divider" />
+              <span className="fc-sb-framework">{FRAMEWORK_LABELS[framework] ?? framework}</span>
+            </>
+          )}
         </div>
 
         {/* Right: Server status + shortcuts */}

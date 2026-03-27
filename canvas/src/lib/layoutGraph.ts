@@ -6,12 +6,12 @@ export type LayoutDirection = 'LR' | 'TB';
 const NODE_WIDTH = 480;
 const DEFAULT_NODE_HEIGHT = 400;
 
-export function layoutGraph(
-  nodes: Node[],
+export function layoutGraph<T extends Record<string, unknown> = Record<string, unknown>>(
+  nodes: Node<T>[],
   edges: Edge[],
   direction: LayoutDirection = 'LR',
   nodeHeight: number = DEFAULT_NODE_HEIGHT
-): Node[] {
+): Node<T>[] {
   if (nodes.length === 0) return [];
 
   const g = new dagre.graphlib.Graph();
