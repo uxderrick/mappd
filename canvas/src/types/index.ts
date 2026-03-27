@@ -21,10 +21,19 @@ export interface ScreenNodeData {
   nodeId?: string;
   pinnedState?: PinnedState;
   hasPinnedState?: boolean;
+  viewportWidth?: number;
+  viewportHeight?: number;
+  forceLive?: boolean;
+  reloadKey?: number;
+  hideLabel?: boolean;
   onRequestLoad?: (nodeId: string) => void;
   onIframeLoaded?: (nodeId: string) => void;
   onOpenPinEditor?: (nodeId: string) => void;
   onSendPinToIframe?: (nodeId: string, iframe: HTMLIFrameElement) => void;
+  devToolsState?: DevToolsNodeState;
+  onClearConsole?: (nodeId: string) => void;
+  onClearNetwork?: (nodeId: string) => void;
+  onRequestStorage?: (iframe: HTMLIFrameElement) => void;
   [key: string]: unknown;
 }
 
@@ -33,4 +42,43 @@ export interface MappdMessage {
   from: string;
   to: string;
   data?: Record<string, any>;
+}
+
+// --- DevTools types ---
+
+export type ConsoleLevel = 'log' | 'warn' | 'error' | 'info' | 'debug';
+
+export interface DevToolsConsoleEntry {
+  id: string;
+  level: ConsoleLevel;
+  args: string[];
+  timestamp: number;
+}
+
+export interface DevToolsNetworkEntry {
+  id: string;
+  method: string;
+  url: string;
+  status?: number;
+  statusText?: string;
+  duration?: number;
+  size?: number;
+  requestBody?: string;
+  responseBody?: string;
+  error?: string;
+  startTime: number;
+  completed: boolean;
+}
+
+export interface DevToolsStorageSnapshot {
+  localStorage: Record<string, string>;
+  sessionStorage: Record<string, string>;
+  cookies: string;
+  capturedAt: number;
+}
+
+export interface DevToolsNodeState {
+  console: DevToolsConsoleEntry[];
+  network: DevToolsNetworkEntry[];
+  storage: DevToolsStorageSnapshot | null;
 }

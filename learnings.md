@@ -19,6 +19,36 @@
 
 <!-- Newest entries at the top -->
 
+### [2026-03-27] Interactive CLI fallback is essential for real-world adoption
+**Context:** Testing on projects where auto-detect failed (no recognized router in package.json or unconventional structure).
+**Learning:** Three-tier fallback is the right pattern: auto-detect → saved config → interactive prompt. The saved config (`.mappd/config.json`) means users only answer once. The prompt uses Node's built-in `readline` — no extra dependency. The parser accepts `frameworkOverride` and `entryPointOverride` options that bypass `detectFramework()`.
+**Why it matters:** Zero-config is the goal, but some projects won't match auto-detection patterns. The fallback must be frictionless — ask 3 questions, save, never ask again.
+**Related:** execution.md, cli/src/prompt.ts
+
+### [2026-03-27] Viewport preset affects iframe scale ratio, not just dimensions
+**Context:** Building viewport size toggle (Desktop/Tablet/Mobile) for the control panel
+**Learning:** When the viewport preset changes from 1280×800 to 375×667, the iframe scale factor changes too (`nodeWidth / iframeWidth`). This means mobile preview nodes are taller relative to their width (portrait ratio) while desktop nodes are wider (landscape). The node width stays fixed at 480px but height adjusts dynamically. This is the right behavior — it matches how Figma handles frame presets.
+**Why it matters:** Don't hardcode `containerHeight` or `iframeScale` — derive them from the viewport dimensions. Future viewport presets (custom sizes, etc.) will just work.
+**Related:** ScreenNode.tsx, ControlPanel.tsx
+
+### [2026-03-27] Cross-origin iframe injection is fundamentally impossible from a web context
+**Context:** Tried three approaches to inject mappd-inject.js into target app iframes: (1) HTML proxy with `<base href>` — broke client-side routing because React Router sees `/proxy/dashboard` as the URL. (2) HTML proxy rewriting asset URLs to absolute — broke Vite's inline module imports (`/@react-refresh`, `/@vite/client`) which can't be rewritten via regex. (3) `contentDocument.createElement('script')` after iframe load — fails silently because iframes from `localhost:3000` are cross-origin to the canvas on `localhost:3569`.
+**Learning:** The only reliable approach for web-based injection: **copy the script to the target project's `public/` directory AND inject a `<script>` tag into the HTML entry point** (`index.html` for Vite, `app/layout.tsx` for Next.js). This makes it same-origin and loads before the app boots. The CLI auto-injects on startup and restores the original files on Ctrl+C shutdown. An Electron-based version could use `webContents.executeJavaScript()` to bypass this entirely.
+**Why it matters:** Every future framework integration needs a strategy for finding and modifying the HTML entry point. Vite = `index.html`, Next.js App Router = `app/layout.tsx` (inject `<head>` if missing), Next.js Pages Router = `pages/_document.tsx`, CRA = `public/index.html`.
+**Related:** execution.md → Script injection saga
+
+### [2026-03-27] Next.js App Router layouts often have no `<head>` tag
+**Context:** Tried injecting `<script>` into partner-dashboard's `app/layout.tsx` but the file had no `<head>` tag — Next.js App Router uses the `metadata` export, not a literal `<head>` element.
+**Learning:** When injecting into Next.js App Router layouts, check for `<head>` first. If missing, insert `<head><script src="/mappd-inject.js" defer></script></head>` after the `<html>` opening tag. Next.js handles this correctly — the `<head>` merges with metadata-generated head content.
+**Why it matters:** This is the common case for Next.js 13+. The injection must handle both patterns.
+**Related:** execution.md → Partner-dashboard testing
+
+### [2026-03-27] Iframe loading threshold of zoom > 1.0 is too conservative
+**Context:** Users had to double-click nodes to activate them because the auto-load threshold was too high.
+**Learning:** Lowered from `zoom > 1.0` to `zoom > 0.3` — nodes now auto-activate at almost any zoom level. Also changed activation from double-click to single-click, and increased queue concurrency from 2 to 4. The original conservative settings were designed for the 18-iframe Next.js overload problem, but with the staggered queue in place, the dev server handles 4 concurrent loads fine.
+**Why it matters:** First impression matters. If a user opens the canvas and sees blank placeholders, they'll think it's broken. Screens should load as soon as possible.
+**Related:** execution.md → Loading UX improvements
+
 ### [2026-03-26] The *.replace() fallback for navigation detection creates too many false positives
 **Context:** Testing parser against partner-dashboard. `name.replace('Access Bank ', '')` was detected as a navigation call.
 **Learning:** The fallback `*.replace()` catch-all (meant to catch `untracked_router.replace('/path')`) also catches `String.replace()`, `Array.splice.replace()`, etc. `String.replace()` is called constantly in real codebases. The fix: only use `.push()` in the untracked fallback, never `.replace()`. Tracked router variables (`const router = useRouter()`) still correctly detect `router.replace()` because they're in the `routerVars` set. Also: bare-segment validation in `normalizePath` must reject strings with spaces — `'Access Bank '` is not a route segment.

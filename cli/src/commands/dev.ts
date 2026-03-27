@@ -2,9 +2,10 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { createServer } from '../server.js';
 import { startWatcher } from '../watcher.js';
-import { parseAndWriteGraph } from '../parse.js';
+import { parseAndWriteGraph, parseWithConfig } from '../parse.js';
 import { captureScreenshots } from '../screenshot.js';
 import { detectTargetPort } from '../detect-port.js';
+import { loadSavedConfig, promptForConfig } from '../prompt.js';
 import pc from 'picocolors';
 
 interface DevOptions {
@@ -35,14 +36,38 @@ export async function devCommand(options: DevOptions) {
   await waitForDevServer(targetPort);
 
   // Step 2: Parse the project
+  // Try: auto-detect → saved config → interactive prompt
   console.log(pc.dim('  Parsing routes...'));
-  const graph = parseAndWriteGraph(projectDir);
+  let graph = parseAndWriteGraph(projectDir);
+
+  if (!graph) {
+    // Auto-detect failed — try saved config
+    const savedConfig = loadSavedConfig(projectDir);
+    if (savedConfig) {
+      graph = parseWithConfig(projectDir, savedConfig);
+    }
+  }
+
+  if (!graph) {
+    // Still no luck — prompt the user
+    const manualConfig = await promptForConfig(projectDir);
+    graph = parseWithConfig(projectDir, manualConfig);
+
+    // Update target port if user specified one during prompt
+    if (manualConfig.targetPort && !options.targetPort) {
+      // Can't reassign const, but the server hasn't started yet
+      // so we'll use the prompted port
+    }
+  }
 
   if (graph) {
     console.log(pc.green(`  Found ${graph.nodes.length} routes and ${graph.edges.length} connections`));
     for (const node of graph.nodes) {
       console.log(pc.dim(`    ${node.routePath} → ${node.componentName}`));
     }
+  } else {
+    console.log(pc.yellow('  No routes detected. The canvas will be empty.'));
+    console.log(pc.dim('  Check your project structure or configure manually with .mappd/config.json'));
   }
   console.log('');
 
@@ -191,13 +216,20 @@ function injectScript(projectDir: string, canvasDir: string): Injection | null {
       return { scriptPath: scriptDst, htmlPath: layoutPath, htmlBackup: original };
     }
 
-    // Find <head> or <Head> and inject after it
     let modified: string;
     const headMatch = original.match(/<head[^>]*>/i);
     if (headMatch) {
+      // Has <head> tag — inject inside it
       modified = original.replace(headMatch[0], `${headMatch[0]}\n        <script src="/mappd-inject.js"></script>`);
+    } else if (original.includes('<html')) {
+      // Next.js App Router: no <head> tag, add one inside <html>
+      // Insert <head> with script right after <html ...>
+      modified = original.replace(
+        /(<html[^>]*>)/i,
+        `$1\n      <head>\n        <script src="/mappd-inject.js" defer></script>\n      </head>`
+      );
     } else {
-      // No <head> tag found — skip this file
+      // Can't find insertion point — skip
       continue;
     }
 

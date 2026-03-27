@@ -18,6 +18,8 @@ export type { FlowGraph, ScreenNode, FlowEdge } from './types.js';
 
 export interface ParseOptions {
   devServerUrl?: string;
+  frameworkOverride?: string;
+  entryPointOverride?: string;
 }
 
 /**
@@ -25,7 +27,14 @@ export interface ParseOptions {
  */
 export function parseProject(projectDir: string, options?: ParseOptions): FlowGraph {
   const absDir = path.resolve(projectDir);
-  const detection = detectFramework(absDir);
+
+  // Use override if provided (from manual config), otherwise auto-detect
+  const detection = options?.frameworkOverride && options?.entryPointOverride
+    ? {
+        framework: options.frameworkOverride as any,
+        entryPoints: [path.resolve(absDir, options.entryPointOverride)],
+      }
+    : detectFramework(absDir);
 
   // Read project name from package.json
   const pkgPath = path.join(absDir, 'package.json');

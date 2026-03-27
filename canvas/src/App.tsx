@@ -15,10 +15,14 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import ScreenNode from './components/ScreenNode';
-import PinPanel from './components/PinPanel';
+// PinPanel merged into ControlPanel
+import ControlPanel, { VIEWPORT_PRESETS, type ViewportPreset, type RouteInfo, type CanvasTheme, type EdgeStyle } from './components/ControlPanel';
+import { layoutGraph, type LayoutDirection } from './lib/layoutGraph';
+import StatusBar from './components/StatusBar';
 import { useCanvasNavigation } from './hooks/useCanvasNavigation';
 import { useIframeQueue } from './hooks/useIframeQueue';
 import { usePinnedState } from './hooks/usePinnedState';
+import { useDevToolsStore } from './hooks/useDevToolsStore';
 import { buildIframeSrc } from './lib/buildIframeSrc';
 import type { ScreenNodeData } from './types';
 
@@ -56,6 +60,7 @@ interface FlowGraphJSON {
 interface BaseNodeData {
   routePath: string;
   componentName: string;
+  componentFilePath: string;
   nodeId: string;
   isDynamic: boolean;
   [key: string]: unknown;
@@ -73,6 +78,7 @@ function adaptGraph(graph: FlowGraphJSON): {
     data: {
       routePath: n.routePath,
       componentName: n.componentName,
+      componentFilePath: n.componentFilePath,
       nodeId: n.id,
       isDynamic: n.isDynamic,
     },
@@ -92,16 +98,63 @@ function adaptGraph(graph: FlowGraphJSON): {
 }
 
 function AppInner() {
+  // Prevent native browser zoom — Figma does the same
+  useEffect(() => {
+    const preventWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) e.preventDefault();
+    };
+    const preventGesture = (e: Event) => {
+      e.preventDefault();
+    };
+    document.addEventListener('wheel', preventWheel, { passive: false });
+    document.addEventListener('gesturestart', preventGesture, { passive: false } as any);
+    document.addEventListener('gesturechange', preventGesture, { passive: false } as any);
+    document.addEventListener('gestureend', preventGesture, { passive: false } as any);
+    return () => {
+      document.removeEventListener('wheel', preventWheel);
+      document.removeEventListener('gesturestart', preventGesture);
+      document.removeEventListener('gesturechange', preventGesture);
+      document.removeEventListener('gestureend', preventGesture);
+    };
+  }, []);
+
   const [config, setConfig] = useState<{ targetPort: number; wsPort: number } | null>(null);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
-  const [pinPanelNodeId, setPinPanelNodeId] = useState<string | null>(null);
   const [graphData, setGraphData] = useState<{ baseNodes: Node<BaseNodeData>[]; edges: Edge[] } | null>(null);
   const [screenshots, setScreenshots] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const [viewportPreset, setViewportPreset] = useState<ViewportPreset>('desktop');
+  const [canvasTheme, setCanvasTheme] = useState<CanvasTheme>('dark');
+  const [showEdges, setShowEdges] = useState(true);
+  const [showLabels, setShowLabels] = useState(true);
+  const [layoutDirection, setLayoutDirection] = useState<LayoutDirection>('LR');
+  const [edgeStyle, setEdgeStyle] = useState<EdgeStyle>('solid');
+  const [liveOverrides, setLiveOverrides] = useState<Record<string, boolean>>({});
+  const [reloadKeys, setReloadKeys] = useState<Record<string, number>>({});
 
   const { zoom } = useViewport();
   const { requestLoad, onLoaded, shouldLoad } = useIframeQueue();
   const { globalAuth, setAuth, setPinForNode, clearPinForNode, getPinForNode, hasPinForNode } = usePinnedState();
+
+  // DevTools: build route→nodeId map for message attribution
+  const routeToNodeId = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const n of (graphData?.baseNodes ?? [])) {
+      map[n.data.routePath] = n.id;
+      // Also map resolved paths (with :param replaced by actual values)
+      const pin = getPinForNode(n.id);
+      if (pin?.urlParams) {
+        let resolved = n.data.routePath;
+        for (const [k, v] of Object.entries(pin.urlParams)) {
+          resolved = resolved.replace(`:${k}`, v);
+        }
+        if (resolved !== n.data.routePath) map[resolved] = n.id;
+      }
+    }
+    return map;
+  }, [graphData, getPinForNode]);
+
+  const { getStateForNode, clearConsole, clearNetwork, requestStorage } = useDevToolsStore(routeToNodeId);
 
   // Fetch config from CLI server; fall back to defaults in standalone dev mode
   useEffect(() => {
@@ -136,19 +189,18 @@ function AppInner() {
   const baseNodes = graphData?.baseNodes ?? [];
   const baseEdges = graphData?.edges ?? [];
 
-  // Auto-activate the index route (/) on first load
+  // Auto-load the index route on first load (but don't select it)
   useEffect(() => {
-    if (!graphData || activeNodeId) return;
+    if (!graphData) return;
     const indexNode = baseNodes.find((n) => n.data.routePath === '/') ?? baseNodes[0];
     if (indexNode) {
-      setActiveNodeId(indexNode.id);
       requestLoad(indexNode.id);
     }
-  }, [graphData, baseNodes, activeNodeId, requestLoad]);
+  }, [graphData, baseNodes, requestLoad]);
 
   // When zoom crosses threshold, request loading for visible nodes
   useEffect(() => {
-    if (zoom > 1.0) {
+    if (zoom > 0.3) {
       baseNodes.forEach((node) => requestLoad(node.id));
     }
   }, [zoom, baseNodes, requestLoad]);
@@ -163,13 +215,40 @@ function AppInner() {
     [onLoaded]
   );
 
-  const handleOpenPinEditor = useCallback((nodeId: string) => {
-    setPinPanelNodeId((prev) => (prev === nodeId ? null : nodeId));
+  // v1.1 handlers
+  const handleToggleEdges = useCallback(() => setShowEdges((v) => !v), []);
+  const handleToggleLabels = useCallback(() => setShowLabels((v) => !v), []);
+
+  const handleReLayout = useCallback(() => {
+    if (!graphData) return;
+    const relaid = layoutGraph(graphData.baseNodes, graphData.edges, layoutDirection);
+    setGraphData((prev) => prev ? { ...prev, baseNodes: relaid } : prev);
+  }, [graphData, layoutDirection]);
+
+  const handleLayoutDirectionChange = useCallback((dir: LayoutDirection) => {
+    setLayoutDirection(dir);
   }, []);
 
-  const handleClosePinPanel = useCallback(() => {
-    setPinPanelNodeId(null);
+  const handleReloadScreen = useCallback((nodeId: string) => {
+    setReloadKeys((prev) => ({ ...prev, [nodeId]: (prev[nodeId] ?? 0) + 1 }));
   }, []);
+
+  const handleToggleLive = useCallback((nodeId: string) => {
+    setLiveOverrides((prev) => ({ ...prev, [nodeId]: prev[nodeId] === false ? true : false }));
+  }, []);
+
+  const vpDims = VIEWPORT_PRESETS[viewportPreset];
+
+  // Route info list for control panel
+  const routeInfoList: RouteInfo[] = useMemo(
+    () => baseNodes.map((n) => ({
+      id: n.id,
+      routePath: n.data.routePath,
+      componentName: n.data.componentName,
+      componentFilePath: n.data.componentFilePath,
+    })),
+    [baseNodes]
+  );
 
   // Build nodes with pinned state and computed iframeSrc
   const nodes: Node<ScreenNodeData>[] = useMemo(
@@ -195,37 +274,55 @@ function AppInner() {
             canGoLive: shouldLoad(node.id),
             pinnedState: pin,
             hasPinnedState: hasPinForNode(node.id),
+            viewportWidth: vpDims.width,
+            viewportHeight: vpDims.height,
+            forceLive: liveOverrides[node.id],
+            reloadKey: reloadKeys[node.id] ?? 0,
+            hideLabel: !showLabels,
             onRequestLoad: handleRequestLoad,
             onIframeLoaded: handleIframeLoaded,
-            onOpenPinEditor: handleOpenPinEditor,
+            devToolsState: getStateForNode(node.id),
+            onClearConsole: clearConsole,
+            onClearNetwork: clearNetwork,
+            onRequestStorage: requestStorage,
           },
         };
       }),
-    [activeNodeId, baseNodes, screenshots, zoom, devServerUrl, shouldLoad, getPinForNode, hasPinForNode, handleRequestLoad, handleIframeLoaded, handleOpenPinEditor]
+    [activeNodeId, baseNodes, screenshots, zoom, devServerUrl, shouldLoad, getPinForNode, hasPinForNode, handleRequestLoad, handleIframeLoaded, vpDims, getStateForNode, clearConsole, clearNetwork, requestStorage, liveOverrides, reloadKeys, showLabels]
   );
 
   const edges = useMemo(
-    () =>
-      baseEdges.map((edge) => {
+    () => {
+      if (!showEdges) return [];
+      return baseEdges.map((edge) => {
         const isConnected =
           activeNodeId !== null &&
           (edge.source === activeNodeId || edge.target === activeNodeId);
+
+        const baseStyle: Record<string, unknown> = {
+          ...edge.style,
+          stroke: isConnected ? '#a78bfa' : undefined,
+          strokeWidth: isConnected ? 2 : undefined,
+          opacity: isConnected ? 1 : undefined,
+        };
+
+        if (edgeStyle === 'dashed') {
+          baseStyle.strokeDasharray = '5 5';
+        }
+
         return {
           ...edge,
-          style: {
-            ...edge.style,
-            stroke: isConnected ? '#a78bfa' : undefined,
-            strokeWidth: isConnected ? 2 : undefined,
-            opacity: isConnected ? 1 : undefined,
-          },
-          animated: isConnected ? true : edge.animated,
+          style: baseStyle,
+          animated: edgeStyle === 'animated' || (isConnected ? true : edge.animated),
+          label: showLabels ? edge.label : undefined,
           labelStyle: isConnected ? { fill: 'rgba(255,255,255,0.9)' } : undefined,
           labelBgStyle: isConnected
             ? { fill: '#a78bfa', fillOpacity: 1 }
             : undefined,
         };
-      }),
-    [activeNodeId, baseEdges]
+      });
+    },
+    [activeNodeId, baseEdges, showEdges, edgeStyle, showLabels]
   );
 
   // When navigating to a dynamic route, auto-pin the extracted URL params
@@ -245,11 +342,6 @@ function AppInner() {
   const handlePaneClick = useCallback(() => {
     setActiveNodeId(null);
   }, []);
-
-  // Find the node data for the pin panel
-  const pinPanelNode = pinPanelNodeId
-    ? baseNodes.find((n) => n.id === pinPanelNodeId)
-    : null;
 
   if (error) {
     return (
@@ -282,33 +374,62 @@ function AppInner() {
         fitView
         panOnScroll
         panOnScrollSpeed={1.5}
+        zoomOnScroll={false}
+        zoomOnPinch={true}
+        zoomOnDoubleClick={false}
         proOptions={{ hideAttribution: true }}
         minZoom={0.1}
         maxZoom={4}
+        className={canvasTheme === 'light' ? 'fc-theme-light' : ''}
       >
         <MiniMap
           nodeColor="#a78bfa"
-          maskColor="rgba(9, 9, 11, 0.75)"
-          style={{ backgroundColor: '#141416' }}
+          maskColor={canvasTheme === 'light' ? 'rgba(245,245,245,0.75)' : 'rgba(9, 9, 11, 0.75)'}
+          style={{ backgroundColor: canvasTheme === 'light' ? '#e5e5e5' : '#141416' }}
         />
         <Controls />
-        <Background variant={BackgroundVariant.Dots} color="rgba(255,255,255,0.06)" gap={24} />
+        <Background
+          variant={BackgroundVariant.Dots}
+          color={canvasTheme === 'light' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.06)'}
+          gap={24}
+        />
       </ReactFlow>
 
-      {/* Pin Panel — slides in from right */}
-      {pinPanelNode && (
-        <PinPanel
-          nodeId={pinPanelNode.id}
-          routePath={pinPanelNode.data.routePath}
-          componentName={pinPanelNode.data.componentName}
-          pinnedState={getPinForNode(pinPanelNode.id)}
-          globalAuth={globalAuth}
-          onUpdateNode={setPinForNode}
-          onClearNode={clearPinForNode}
-          onUpdateAuth={setAuth}
-          onClose={handleClosePinPanel}
-        />
-      )}
+      {/* Control Panel — right sidebar */}
+      <ControlPanel
+        routes={routeInfoList}
+        activeNodeId={activeNodeId}
+        onSelectNode={setActiveNodeId}
+        devServerUrl={devServerUrl}
+        onViewportChange={setViewportPreset}
+        currentViewport={viewportPreset}
+        canvasTheme={canvasTheme}
+        onThemeChange={setCanvasTheme}
+        showEdges={showEdges}
+        onToggleEdges={handleToggleEdges}
+        showLabels={showLabels}
+        onToggleLabels={handleToggleLabels}
+        layoutDirection={layoutDirection}
+        onLayoutDirectionChange={handleLayoutDirectionChange}
+        onReLayout={handleReLayout}
+        edgeStyle={edgeStyle}
+        onEdgeStyleChange={setEdgeStyle}
+        onReloadScreen={handleReloadScreen}
+        onToggleLive={handleToggleLive}
+        liveOverrides={liveOverrides}
+        pinnedState={activeNodeId ? getPinForNode(activeNodeId) : undefined}
+        globalAuth={globalAuth}
+        onUpdatePin={setPinForNode}
+        onClearPin={clearPinForNode}
+        onUpdateAuth={setAuth}
+      />
+
+      {/* Status Bar — bottom */}
+      <StatusBar
+        screenCount={baseNodes.length}
+        connectionCount={baseEdges.length}
+        devServerUrl={devServerUrl}
+      />
     </div>
   );
 }

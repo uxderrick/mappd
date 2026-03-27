@@ -20,6 +20,46 @@
 
 <!-- Newest entries at the top -->
 
+### [2026-03-27] Control Panel v1.1 — 9 display/layout/action features
+**What was done:** Added all v1.1 P2 features to ControlPanel: (1) Canvas theme toggle (dark/light — swaps background, dot, edge, minimap colors via `fc-theme-light` class), (2) Show/hide edges toggle (filters edges array to empty), (3) Show/hide labels toggle (hides node labels + edge labels), (4) Layout direction toggle LR/TB, (5) Re-layout button (runs dagre in-browser via `layoutGraph.ts`), (6) Export as PDF (captures PNG then opens print dialog), (7) Reload screen (increments `reloadKey` to force iframe remount), (8) Live/Thumbnail toggle per node (`forceLive` override), (9) Edge style options — Solid/Dashed/Animated. New UI patterns: segmented controls, pill toggles. Created `lib/layoutGraph.ts` with dagre for client-side re-layout.
+**Why:** Complete the v1.1 control panel feature set
+**Trade-offs:** PDF export uses browser print dialog (PNG → print window) rather than jsPDF — avoids a heavy dependency and gives users native print controls. Re-layout runs dagre on all nodes flat (no section grouping like the parser) — simpler but may produce less organized layouts for large graphs.
+**Outcome:** Clean TypeScript build (0 errors). All 9 v1.1 items marked done in todo.md.
+**Related:** todo.md — Control Panel v1.1 section
+
+### [2026-03-27] Control Panel v1 + Status Bar
+**What was done:** Built `ControlPanel.tsx` (right sidebar) with 6 features: screen selector dropdown (zooms to node), zoom controls (±, fit all, fit selection), viewport size toggle (Desktop/Tablet/Mobile), open in VS Code editor, open route in browser, export canvas as PNG. Built `StatusBar.tsx` (bottom bar) with route/connection counts, dev server online/offline ping indicator, and keyboard shortcuts popover. Updated `ScreenNode.tsx` to dynamically scale iframes based on viewport preset (was hardcoded 1280×800). Added `html-to-image` dependency for PNG export.
+**Why:** Control Panel v1 P1 items from todo — essential canvas controls before launch
+**Trade-offs:** Floating panel (top-right, closeable) vs full-height sidebar — chose floating to not compete with PinPanel which is full-height right-aligned. Used `html-to-image` over `dom-to-image` for better maintenance. Status bar health check uses `no-cors` fetch ping every 10s.
+**Outcome:** Clean TypeScript build (0 errors). All 9 todo items (6 control panel + 3 status bar) marked done.
+**Related:** todo.md — Control Panel section
+
+### [2026-03-27] Loading UX improvements — threshold, click, concurrency
+**What was done:** Three changes to make screens load faster: (1) Lowered auto-activate zoom threshold from `> 1.0` to `> 0.3`. (2) Changed node activation from double-click to single-click. (3) Increased iframe queue concurrency from 2 to 4.
+**Why:** Users reported having to double-click nodes before content appeared. The conservative settings from the staggered-loading implementation were too aggressive for the common case (5-20 screens).
+**Trade-offs:** Higher concurrency (4 vs 2) may strain slow dev servers with 20+ routes. Acceptable tradeoff — the queue still prevents the thundering-herd problem, just with a wider pipeline.
+**Outcome:** Screens load almost immediately on canvas open. No more blank placeholders requiring manual activation.
+
+### [2026-03-27] Script injection saga — proxy failed, file injection works
+**What was done:** Attempted three approaches to inject `mappd-inject.js` into target app iframes for navigation interception:
+
+1. **HTML proxy with `<base href>`** — Proxy at `/proxy/*` fetched HTML from target, injected script + base tag. **Failed:** `<base href>` broke React Router (URL mismatch) and broke all client-side routing.
+
+2. **HTML proxy with absolute URL rewriting** — Replaced relative `src="/..."` with `src="http://localhost:PORT/..."`. **Failed:** Vite's inline module imports (`/@react-refresh`, `/@vite/client`) couldn't be rewritten — they're inside `<script>` bodies, not attributes.
+
+3. **`contentDocument` DOM injection** — After iframe `onload`, inject `<script>` via same-origin DOM access. **Failed:** Iframes are cross-origin (target on :3000, canvas on :3569), so `contentDocument` throws.
+
+4. **File injection (final solution)** — CLI copies `mappd-inject.js` to target's `public/` directory, adds `<script>` tag to HTML entry point (`index.html` for Vite, `app/layout.tsx` for Next.js). Script loads before app JS. **Works.** Files restored on Ctrl+C.
+
+**Why:** Navigation interception is core to the product — without it, clicks navigate inside the iframe instead of panning the canvas.
+**Trade-offs:** Modifies the target project's files temporarily. This is "semi-invasive" — the files are auto-restored on shutdown, but if Mappd crashes without cleanup, the changes persist. Added to todo: crash-safe cleanup.
+**Outcome:** Panning works on both Vite (demo-app) and Next.js (partner-dashboard) projects. Script tag auto-injected and auto-cleaned.
+
+### [2026-03-27] Partner-dashboard testing — 23 routes on canvas
+**What was done:** Tested Mappd against partner-dashboard (Next.js 15, App Router, pnpm monorepo). 23 routes detected, 26 connections. Required fixes: (1) Next.js layout had no `<head>` tag — added `<head>` insertion after `<html>`. (2) `EADDRINUSE` error from stale process — added graceful error handling with kill command hint. (3) Monorepo detection — parser now scans `apps/*/` and `packages/*/` for sub-projects.
+**Why:** Real-world validation on a complex production app.
+**Outcome:** All routes detected and rendered on canvas. Navigation interception works. Staggered loading handles 23 simultaneous screens without crashing the Next.js dev server.
+
 ### [2026-03-26] Deep parser audit + comprehensive fix (round 3)
 **What was done:** Audited the entire parser codebase against official React Router v6/v7 and Next.js docs (validated online). Implemented 11 major fixes across 7 files:
 

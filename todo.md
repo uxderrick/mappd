@@ -31,6 +31,46 @@ Priorities: `P0` (critical/blocking), `P1` (important), `P2` (nice-to-have), `P3
 - [x] **State pinning UI** — Global auth + per-node URL params, pin panel sidebar `[P1]` `[done: 2026-03-23]`
 - [x] **File watcher + WebSocket** — chokidar watches source, re-parses, broadcasts via WebSocket `[P1]` `[done: 2026-03-23]`
 
+### Control Panel (Right Sidebar)
+
+**v1 — P1 (build now)**
+- [x] **Screen selector dropdown** — Select any route from a list, canvas zooms to it `[P1]` `[done: 2026-03-27]`
+- [x] **Zoom controls** — Zoom %, fit all, fit selection `[P1]` `[done: 2026-03-27]`
+- [x] **Viewport size toggle** — Mobile (375x667) / Tablet (768x1024) / Desktop (1280x800) `[P1]` `[done: 2026-03-27]`
+- [x] **Open in editor** — Open component file in VS Code (`vscode://file/...`) `[P1]` `[done: 2026-03-27]`
+- [x] **Export as PNG** — Screenshot the full canvas `[P1]` `[done: 2026-03-27]`
+- [x] **Open in browser** — Open route in a new tab on target dev server `[P1]` `[done: 2026-03-27]`
+
+**v1.1 — P2 (after launch)**
+- [x] **Canvas theme toggle** — Dark / Light canvas background `[P2]` `[done: 2026-03-27]`
+- [x] **Show/hide edges** — Toggle flow connections visibility `[P2]` `[done: 2026-03-27]`
+- [x] **Show/hide labels** — Toggle route labels `[P2]` `[done: 2026-03-27]`
+- [x] **Layout direction toggle** — LR (left-to-right) / TB (top-to-bottom) `[P2]` `[done: 2026-03-27]`
+- [x] **Re-layout button** — Re-run Dagre, discard manual positioning `[P2]` `[done: 2026-03-27]`
+- [x] **Export as PDF** — Flow diagram as PDF `[P2]` `[done: 2026-03-27]`
+- [x] **Reload screen** — Refresh a single screen's iframe `[P2]` `[done: 2026-03-27]`
+- [x] **Live/Thumbnail toggle** — Force live or static preview per node `[P2]` `[done: 2026-03-27]`
+- [x] **Edge style options** — Solid / Dashed / Animated `[P2]` `[done: 2026-03-27]`
+
+**Bottom status bar (always visible)**
+- [x] **Route count** — "23 screens, 26 connections" `[P1]` `[done: 2026-03-27]`
+- [x] **Target server status** — "localhost:3000" with green/red dot `[P1]` `[done: 2026-03-27]`
+- [x] **Keyboard shortcuts help** — `?` icon opens shortcut reference `[P2]` `[done: 2026-03-27]`
+
+### Layout Restructure (explore)
+- [ ] **Figma-style 3-panel layout** — Left panel = screen list, Canvas = middle, Right panel = selected node actions `[P1]` `[added: 2026-03-27]`
+  - **Left panel:** Full screen list (replaces dropdown), click to zoom to node. Always visible, scrollable
+  - **Right panel:** Everything about the selected node — DevTools tabs, Pin State, Open in editor, Viewport, Reload. Consolidates PinPanel + DevToolsPanel + node actions into one panel
+  - **Canvas:** Takes up the middle, no more per-node DevTools (removes clutter, keeps node height consistent)
+  - **Why this is better:**
+    1. DevTools below each node clutters canvas and changes node height (breaks layout)
+    2. Fixed right panel is always the same size — readable at any zoom level
+    3. All node actions in one place instead of scattered across node UI and floating panels
+    4. Matches Figma's model exactly — left = layers list, right = properties of selected
+
+### Bugs / Polish
+- [ ] **Auto re-layout on viewport change** — Changing viewport (Desktop→Mobile) changes node height, causing nodes to overlap. Should auto re-run dagre layout when viewport preset changes `[P1]` `[added: 2026-03-27]`
+
 ### Phase 2+ Backlog
 - [ ] **Per-node DevTools panel** — Console, Network, Application tabs per screen node `[P1]` `[added: 2026-03-23]`
   - Console: override `console.*` in iframe, forward via postMessage — **feasible**
