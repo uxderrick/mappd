@@ -547,14 +547,15 @@ function AppInner() {
             return activeNode && s.parentRoutePath === activeNode.data.routePath;
           }
         ) : []}
-        onOverrideState={(hookIndex, value) => {
+        onOverrideState={(hookIndex, value, componentName) => {
           const iframe = activeNodeId ? getIframe(activeNodeId) : null;
           if (iframe) {
-            console.log('[Mappd] Sending state override:', { hookIndex, value, nodeId: activeNodeId });
+            console.log('[Mappd] Sending state override:', { hookIndex, value, componentName, nodeId: activeNodeId });
             iframe.contentWindow?.postMessage({
               type: 'fc-override-state',
               hookIndex,
               value,
+              componentName,
             }, '*');
           } else {
             console.warn('[Mappd] No iframe found for active node:', activeNodeId);

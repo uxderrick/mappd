@@ -38,6 +38,21 @@ export function createServer(options: ServerOptions) {
     }
   });
 
+  // Serve screenshots from .mappd/screenshots/
+  app.use('/screenshots', express.static(path.join(flowGraphDir, 'screenshots')));
+
+  // Serve screenshots manifest
+  app.get('/screenshots.json', (_req, res) => {
+    const manifestPath = path.join(flowGraphDir, 'screenshots.json');
+    if (fs.existsSync(manifestPath)) {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.sendFile(manifestPath);
+    } else {
+      res.json({});
+    }
+  });
+
   // Serve config (target port, etc.) for the canvas to know where to point iframes
   app.get('/mappd-config.json', (_req, res) => {
     res.json({

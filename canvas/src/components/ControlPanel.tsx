@@ -70,7 +70,7 @@ interface ControlPanelProps {
   activeIframeRef: React.RefObject<HTMLIFrameElement | null>;
   // State screens
   stateScreens?: StateScreenInfo[];
-  onOverrideState?: (hookIndex: number, value: string | number | boolean | Record<string, unknown>) => void;
+  onOverrideState?: (hookIndex: number, value: string | number | boolean | Record<string, unknown>, componentName?: string) => void;
 }
 
 export default function ControlPanel({
@@ -430,7 +430,7 @@ export default function ControlPanel({
                     <button
                       key={i}
                       className="fc-cp-state-btn"
-                      onClick={() => onOverrideState?.(s.hookIndex, s.stateValue)}
+                      onClick={() => onOverrideState?.(s.hookIndex, s.stateValue, s.componentName)}
                       title={`Set ${s.hookType} hook #${s.hookIndex} to ${JSON.stringify(s.stateValue)}`}
                     >
                       <span className="fc-cp-state-name">{s.name}</span>

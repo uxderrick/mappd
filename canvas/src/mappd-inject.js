@@ -196,42 +196,100 @@
   // Handle state override requests from parent canvas
   // =============================================
 
+  /**
+   * Find a fiber by component name, then validate it has a hook at hookIndex.
+   */
+  function findFiberByComponentName(fiber, componentName, hookIndex) {
+    if (!fiber) return null;
+
+    // Check if this fiber's type matches the component name
+    var typeName = fiber.type && (fiber.type.name || fiber.type.displayName);
+    if (typeName === componentName) {
+      // Verify it has a hook at the given index
+      var state = fiber.memoizedState;
+      var idx = 0;
+      while (state) {
+        if (idx === hookIndex && state.queue) {
+          return fiber;
+        }
+        state = state.next;
+        idx++;
+      }
+    }
+
+    // Recurse into children
+    var child = fiber.child;
+    while (child) {
+      var found = findFiberByComponentName(child, componentName, hookIndex);
+      if (found) return found;
+      child = child.sibling;
+    }
+
+    return null;
+  }
+
   window.addEventListener('message', function (e) {
     if (!e.data || e.data.type !== 'fc-override-state') return;
 
     var hookIndex = e.data.hookIndex;
     var newValue = e.data.value;
-    var hookType = e.data.hookType; // 'useState' or 'useReducer'
+    var componentName = e.data.componentName;
 
+    console.log('[mappd-inject] Override request:', { hookIndex: hookIndex, value: newValue, componentName: componentName });
+
+    // Check renderer
     var renderer = getRenderer();
+    console.log('[mappd-inject] Renderer:', renderer ? 'found' : 'NOT FOUND');
+    console.log('[mappd-inject] overrideHookState:', renderer && typeof renderer.overrideHookState);
+
     if (!renderer || typeof renderer.overrideHookState !== 'function') {
       window.parent.postMessage({
         type: 'fc-override-state-result',
         success: false,
-        error: 'React renderer not found or overrideHookState not available',
+        error: 'React renderer not found or overrideHookState not available. Renderer: ' + (renderer ? 'exists but no overrideHookState' : 'null'),
         route: originalPathname,
       }, '*');
       return;
     }
 
-    // Find the fiber root
+    // Check fiber root
+    console.log('[mappd-inject] fiberRoots tracked:', fiberRoots.size);
     var fiberRoot = getFiberRoot();
+    console.log('[mappd-inject] Fiber root:', fiberRoot ? 'found' : 'NOT FOUND');
+
     if (!fiberRoot) {
+      // Debug: try DOM walk manually
+      var rootEl = document.getElementById('root');
+      console.log('[mappd-inject] #root element:', rootEl ? 'found' : 'NOT FOUND');
+      if (rootEl) {
+        var domKeys = Object.keys(rootEl).filter(function(k) { return k.startsWith('__react'); });
+        console.log('[mappd-inject] React keys on #root:', domKeys);
+      }
+
       window.parent.postMessage({
         type: 'fc-override-state-result',
         success: false,
-        error: 'Could not find React fiber root in DOM',
+        error: 'Could not find React fiber root. fiberRoots.size=' + fiberRoots.size,
         route: originalPathname,
       }, '*');
       return;
     }
 
-    // Walk up to the root fiber
+    // Walk up to the true root
     var root = fiberRoot;
     while (root.return) root = root.return;
 
-    // Find the fiber with the matching hook
-    var targetFiber = findFiberWithHook(root, hookIndex);
+    // Strategy 1: Find by component name (most precise)
+    var targetFiber = componentName
+      ? findFiberByComponentName(root, componentName, hookIndex)
+      : null;
+    console.log('[mappd-inject] By component name:', targetFiber ? 'found ' + (targetFiber.type && targetFiber.type.name) : 'NOT FOUND');
+
+    // Strategy 2: Fall back to generic hook index search
+    if (!targetFiber) {
+      targetFiber = findFiberWithHook(root, hookIndex);
+      console.log('[mappd-inject] By hook index fallback:', targetFiber ? 'found ' + (targetFiber.type && targetFiber.type.name) : 'NOT FOUND');
+    }
 
     if (!targetFiber) {
       window.parent.postMessage({
