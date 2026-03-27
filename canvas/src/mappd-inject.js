@@ -302,9 +302,29 @@
     }
 
     try {
-      // overrideHookState(fiber, hookIndex, path, value)
-      // path is [] for direct replacement of the entire hook value
-      renderer.overrideHookState(targetFiber, hookIndex, [], newValue);
+      // Strategy A: Use the hook's dispatch function directly (most reliable)
+      // Walk to the hook at hookIndex and call its queue.dispatch
+      var hookState = targetFiber.memoizedState;
+      var hIdx = 0;
+      while (hookState && hIdx < hookIndex) {
+        hookState = hookState.next;
+        hIdx++;
+      }
+
+      var dispatched = false;
+      if (hookState && hookState.queue && hookState.queue.dispatch) {
+        // For useState, dispatch is the setter function (like setStep)
+        // Calling it triggers a proper React re-render
+        hookState.queue.dispatch(newValue);
+        dispatched = true;
+        console.log('[mappd-inject] Dispatched via queue.dispatch');
+      }
+
+      // Strategy B: Fall back to overrideHookState if dispatch not available
+      if (!dispatched) {
+        renderer.overrideHookState(targetFiber, hookIndex, [], newValue);
+        console.log('[mappd-inject] Used overrideHookState fallback');
+      }
 
       window.parent.postMessage({
         type: 'fc-override-state-result',
@@ -312,6 +332,7 @@
         route: originalPathname,
         hookIndex: hookIndex,
         value: newValue,
+        method: dispatched ? 'dispatch' : 'overrideHookState',
       }, '*');
     } catch (err) {
       window.parent.postMessage({

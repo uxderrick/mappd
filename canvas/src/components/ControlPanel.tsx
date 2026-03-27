@@ -7,7 +7,6 @@ import {
   ArrowSquareOut,
   CaretDown,
   Download,
-  FilePdf,
   Minus,
   Monitor,
   PencilSimple,
@@ -252,40 +251,6 @@ export default function ControlPanel({
     }
   }, [canvasTheme, activeNodeId, routes, devServerUrl]);
 
-  // Export as PDF
-  const handleExportPdf = useCallback(() => {
-    const bgColor = canvasTheme === 'dark' ? '#0c0c0e' : '#e4e4e8';
-    const activeRoute = routes.find(r => r.id === activeNodeId);
-
-    if (activeNodeId && activeRoute) {
-      // Selected screen — open route in print-ready window
-      const printWindow = window.open(`${devServerUrl}${activeRoute.routePath}`, '_blank');
-      if (printWindow) {
-        setTimeout(() => printWindow.print(), 1500);
-      }
-    } else {
-      // Full canvas export
-      const viewport = document.querySelector('.react-flow__viewport') as HTMLElement;
-      if (!viewport) return;
-      toPng(viewport, {
-        backgroundColor: bgColor,
-        pixelRatio: 2,
-        filter: canvasFilter,
-      }).then((dataUrl) => {
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) return;
-        printWindow.document.write(
-          `<html><head><title>Mappd Flow</title>` +
-          `<style>body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:${bgColor}}` +
-          `img{max-width:100%;max-height:100vh}@media print{body{background:white}}</style>` +
-          `</head><body><img src="${dataUrl}" />` +
-          `<script>setTimeout(()=>{window.print()},300)<\/script>` +
-          `</body></html>`
-        );
-        printWindow.document.close();
-      });
-    }
-  }, [canvasTheme, activeNodeId, routes, devServerUrl]);
 
   // Pin state handlers
   const handleParamChange = (name: string, value: string) => {
@@ -596,7 +561,7 @@ export default function ControlPanel({
           <button className="fc-cp-section-toggle" onClick={() => toggleSection('export')}>
             <span className="fc-cp-section-title" style={{ margin: 0 }}>Export</span>
             {!openSections.export && (
-              <span className="fc-cp-collapse-arrow-label">PNG, PDF</span>
+              <span className="fc-cp-collapse-arrow-label">PNG</span>
             )}
             <CaretDown size={10} className={`fc-cp-chevron ${openSections.export ? 'is-open' : ''}`} />
           </button>
@@ -616,10 +581,6 @@ export default function ControlPanel({
                 <button className="fc-cp-btn fc-cp-btn-full" onClick={handleExportPng}>
                   <Download size={12} />
                   {activeNodeId ? 'PNG (screen)' : 'PNG (canvas)'}
-                </button>
-                <button className="fc-cp-btn fc-cp-btn-full" onClick={handleExportPdf}>
-                  <FilePdf size={12} />
-                  {activeNodeId ? 'PDF (screen)' : 'PDF (canvas)'}
                 </button>
               </div>
             </div>
