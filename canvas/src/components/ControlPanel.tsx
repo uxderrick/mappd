@@ -205,26 +205,38 @@ export default function ControlPanel({
       !classes.includes('fc-screen-list');
   };
 
-  // Export as PNG — selected node if active, full canvas if not
+  /**
+   * For selected screen export: open the route in a new window at full size,
+   * then trigger browser print/save. This avoids the cross-origin iframe capture issue.
+   * For full canvas export: use html-to-image on the React Flow viewport.
+   */
+
+  // Export as PNG
   const handleExportPng = useCallback(() => {
     const bgColor = canvasTheme === 'dark' ? '#0c0c0e' : '#e4e4e8';
-    const selectedNode = getSelectedNodeElement();
     const activeRoute = routes.find(r => r.id === activeNodeId);
 
-    if (selectedNode) {
-      // Export just the selected node
-      toPng(selectedNode, {
-        backgroundColor: bgColor,
-        pixelRatio: 2,
-      }).then((dataUrl) => {
-        const link = document.createElement('a');
-        const routeName = activeRoute?.routePath.replace(/\//g, '-').replace(/^-/, '') || 'screen';
-        link.download = `mappd-${routeName}.png`;
-        link.href = dataUrl;
-        link.click();
+    if (activeNodeId && activeRoute) {
+      // Selected screen — open route directly for the user to screenshot
+      // Also check if we have a cached screenshot
+      const screenshotUrl = `/screenshots/${activeNodeId}.png`;
+      fetch(screenshotUrl, { method: 'HEAD' }).then(res => {
+        if (res.ok) {
+          // Use cached Puppeteer screenshot
+          const link = document.createElement('a');
+          const routeName = activeRoute.routePath.replace(/\//g, '-').replace(/^-/, '') || 'screen';
+          link.download = `mappd-${routeName}.png`;
+          link.href = screenshotUrl;
+          link.click();
+        } else {
+          // No screenshot — open route in new tab for manual capture
+          window.open(`${devServerUrl}${activeRoute.routePath}`, '_blank');
+        }
+      }).catch(() => {
+        window.open(`${devServerUrl}${activeRoute.routePath}`, '_blank');
       });
     } else {
-      // Export full canvas
+      // Full canvas export
       const viewport = document.querySelector('.react-flow__viewport') as HTMLElement;
       if (!viewport) return;
       toPng(viewport, {
@@ -238,39 +250,42 @@ export default function ControlPanel({
         link.click();
       });
     }
-  }, [canvasTheme, activeNodeId, getSelectedNodeElement, routes]);
+  }, [canvasTheme, activeNodeId, routes, devServerUrl]);
 
-  // Export as PDF — selected node if active, full canvas if not
+  // Export as PDF
   const handleExportPdf = useCallback(() => {
     const bgColor = canvasTheme === 'dark' ? '#0c0c0e' : '#e4e4e8';
-    const selectedNode = getSelectedNodeElement();
     const activeRoute = routes.find(r => r.id === activeNodeId);
 
-    const target = selectedNode || document.querySelector('.react-flow__viewport') as HTMLElement;
-    if (!target) return;
-
-    const opts = selectedNode
-      ? { backgroundColor: bgColor, pixelRatio: 2 }
-      : { backgroundColor: bgColor, pixelRatio: 2, filter: canvasFilter };
-
-    const title = selectedNode
-      ? `Mappd — ${activeRoute?.routePath || 'Screen'}`
-      : 'Mappd Flow';
-
-    toPng(target, opts).then((dataUrl) => {
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) return;
-      printWindow.document.write(
-        `<html><head><title>${title}</title>` +
-        `<style>body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:${bgColor}}` +
-        `img{max-width:100%;max-height:100vh}@media print{body{background:white}}</style>` +
-        `</head><body><img src="${dataUrl}" />` +
-        `<script>setTimeout(()=>{window.print()},300)<\/script>` +
-        `</body></html>`
-      );
-      printWindow.document.close();
-    });
-  }, [canvasTheme, activeNodeId, getSelectedNodeElement, routes]);
+    if (activeNodeId && activeRoute) {
+      // Selected screen — open route in print-ready window
+      const printWindow = window.open(`${devServerUrl}${activeRoute.routePath}`, '_blank');
+      if (printWindow) {
+        setTimeout(() => printWindow.print(), 1500);
+      }
+    } else {
+      // Full canvas export
+      const viewport = document.querySelector('.react-flow__viewport') as HTMLElement;
+      if (!viewport) return;
+      toPng(viewport, {
+        backgroundColor: bgColor,
+        pixelRatio: 2,
+        filter: canvasFilter,
+      }).then((dataUrl) => {
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+        printWindow.document.write(
+          `<html><head><title>Mappd Flow</title>` +
+          `<style>body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:${bgColor}}` +
+          `img{max-width:100%;max-height:100vh}@media print{body{background:white}}</style>` +
+          `</head><body><img src="${dataUrl}" />` +
+          `<script>setTimeout(()=>{window.print()},300)<\/script>` +
+          `</body></html>`
+        );
+        printWindow.document.close();
+      });
+    }
+  }, [canvasTheme, activeNodeId, routes, devServerUrl]);
 
   // Pin state handlers
   const handleParamChange = (name: string, value: string) => {

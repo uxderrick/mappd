@@ -13,6 +13,9 @@
   // This gives us access to overrideHookState for state injection.
   // =============================================
 
+  // Track fiber roots via the DevTools hook — React registers roots on commit
+  var fiberRoots = new Set();
+
   if (!window.__REACT_DEVTOOLS_GLOBAL_HOOK__) {
     var renderers = new Map();
     window.__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
@@ -23,10 +26,21 @@
         renderers.set(id, renderer);
         return id;
       },
-      onCommitFiberRoot: function () {},
+      onCommitFiberRoot: function (rendererId, root) {
+        // React calls this every commit — track the root
+        if (root) fiberRoots.add(root);
+      },
       onCommitFiberUnmount: function () {},
       onPostCommitFiberRoot: function () {},
       onScheduleFibersWithFamiliesChanged: function () {},
+    };
+  } else {
+    // DevTools already installed (e.g., browser extension) — patch onCommitFiberRoot
+    var existingHook = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
+    var originalOnCommit = existingHook.onCommitFiberRoot;
+    existingHook.onCommitFiberRoot = function (rendererId, root) {
+      if (root) fiberRoots.add(root);
+      if (originalOnCommit) originalOnCommit.apply(this, arguments);
     };
   }
 
@@ -53,17 +67,62 @@
   }
 
   /**
-   * Find the React fiber root from the DOM.
-   * React attaches fibers to DOM nodes via __reactFiber$ properties.
+   * Find the React fiber root.
+   * Strategy 1: Use roots tracked via onCommitFiberRoot (most reliable).
+   * Strategy 2: Walk DOM looking for __reactContainer$ / __reactFiber$ (fallback).
    */
   function getFiberRoot() {
-    var root = document.getElementById('root') || document.getElementById('__next') || document.body.firstElementChild;
-    if (!root) return null;
-    // Find the __reactFiber$ key
-    var keys = Object.keys(root);
+    // Strategy 1: Use tracked roots from onCommitFiberRoot
+    if (fiberRoots.size > 0) {
+      var iter = fiberRoots.values();
+      var next = iter.next();
+      while (!next.done) {
+        var root = next.value;
+        // FiberRoot has a .current property pointing to the root fiber
+        if (root && root.current) return root.current;
+        next = iter.next();
+      }
+    }
+
+    // Strategy 2: DOM walking fallback
+    var candidates = [
+      document.getElementById('root'),
+      document.getElementById('__next'),
+      document.getElementById('app'),
+      document.body.firstElementChild,
+    ];
+
+    for (var c = 0; c < candidates.length; c++) {
+      var el = candidates[c];
+      if (!el) continue;
+      var fiber = getFiberFromElement(el);
+      if (fiber) return fiber;
+    }
+
+    // Last resort: walk body children
+    var children = document.body.children;
+    for (var i = 0; i < children.length; i++) {
+      var fiber = getFiberFromElement(children[i]);
+      if (fiber) return fiber;
+    }
+
+    return null;
+  }
+
+  function getFiberFromElement(el) {
+    if (!el) return null;
+    var keys = Object.keys(el);
     for (var i = 0; i < keys.length; i++) {
-      if (keys[i].startsWith('__reactFiber$') || keys[i].startsWith('__reactInternalInstance$')) {
-        return root[keys[i]];
+      var key = keys[i];
+      if (key.startsWith('__reactContainer$') ||
+          key.startsWith('__reactFiber$') ||
+          key.startsWith('__reactInternalInstance$')) {
+        var fiber = el[key];
+        // __reactContainer$ points to a FiberRoot — return .current
+        if (fiber && key.startsWith('__reactContainer$') && fiber.current) {
+          return fiber.current;
+        }
+        return fiber;
       }
     }
     return null;
