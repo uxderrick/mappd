@@ -1,13 +1,14 @@
 import { routePathToId } from './analyzers/ast-utils.js';
-import type { ParsedRoute, DetectedLink, FlowGraph, ScreenNode, FlowEdge } from './types.js';
+import type { ParsedRoute, DetectedLink, DetectedStateScreen, FlowGraph, ScreenNode, FlowEdge } from './types.js';
 
 /**
- * Build a FlowGraph from parsed routes and detected links.
+ * Build a FlowGraph from parsed routes, detected links, and state screens.
  */
 export function buildFlowGraph(
   routes: ParsedRoute[],
   links: DetectedLink[],
   metadata: { projectName: string; framework: FlowGraph['metadata']['framework'] },
+  stateScreens: DetectedStateScreen[] = [],
 ): FlowGraph {
   // Build nodes
   const nodes: ScreenNode[] = routes.map((route) => ({
@@ -65,6 +66,7 @@ export function buildFlowGraph(
   return {
     nodes,
     edges,
+    stateScreens,
     metadata: {
       projectName: metadata.projectName,
       framework: metadata.framework,

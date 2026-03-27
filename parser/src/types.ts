@@ -61,12 +61,26 @@ export interface FlowEdge {
 export interface FlowGraph {
   nodes: ScreenNode[];
   edges: FlowEdge[];
+  stateScreens: DetectedStateScreen[];
   metadata: {
     projectName: string;
     framework: 'react-router' | 'react-router-v7' | 'nextjs-app' | 'nextjs-pages';
     generatedAt: string;
     mappdVersion: string;
   };
+}
+
+export interface DetectedStateScreen {
+  parentRoutePath: string;
+  parentComponentFile: string;
+  name: string;
+  hookType: 'useState' | 'useReducer' | 'xstate' | 'zustand';
+  hookIndex: number;
+  stateValue: string | number | boolean;
+  componentName: string;
+  confidence: 'high' | 'medium' | 'low';
+  sourceLine: number;
+  sourceColumn: number;
 }
 
 export type Framework = 'react-router' | 'react-router-v7' | 'nextjs-app' | 'nextjs-pages';

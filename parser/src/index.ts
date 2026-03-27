@@ -9,12 +9,13 @@ import { extractNextjsAppRoutes } from './extractors/nextjs-app-router.js';
 import { extractNextjsPagesRoutes } from './extractors/nextjs-pages-router.js';
 import { extractReactRouterV7Routes } from './extractors/react-router-v7.js';
 import { detectLinks, parseRouteHelpers } from './analyzers/link-detector.js';
+import { detectStateScreens } from './analyzers/state-detector.js';
 import { parseFile } from './analyzers/ast-utils.js';
 import { buildFlowGraph } from './graph-builder.js';
 import { layoutNodes } from './layout.js';
-import type { FlowGraph, DetectedLink } from './types.js';
+import type { FlowGraph, DetectedLink, DetectedStateScreen } from './types.js';
 
-export type { FlowGraph, ScreenNode, FlowEdge } from './types.js';
+export type { FlowGraph, ScreenNode, FlowEdge, DetectedStateScreen } from './types.js';
 
 export interface ParseOptions {
   devServerUrl?: string;
@@ -56,10 +57,14 @@ export function parseProject(projectDir: string, options?: ParseOptions): FlowGr
         if (!route.componentFilePath) return [];
         return detectLinks(route.componentFilePath, route.path, routeHelpers);
       });
+      const allStateScreens = allRoutes.flatMap((route) => {
+        if (!route.componentFilePath) return [];
+        return detectStateScreens(route.componentFilePath, route.path);
+      });
       graph = buildFlowGraph(allRoutes, allLinks, {
         projectName,
         framework: 'react-router',
-      });
+      }, allStateScreens);
       break;
     }
 
@@ -80,10 +85,14 @@ export function parseProject(projectDir: string, options?: ParseOptions): FlowGr
         // redirect() in loader/action exports too — those are in the same file
         // so they're already picked up by the detectLinks call above.
       }
+      const allStateScreensV7 = allRoutes.flatMap((route) => {
+        if (!route.componentFilePath) return [];
+        return detectStateScreens(route.componentFilePath, route.path);
+      });
       graph = buildFlowGraph(allRoutes, allLinks, {
         projectName,
         framework: 'react-router-v7',
-      });
+      }, allStateScreensV7);
       break;
     }
 
@@ -124,10 +133,14 @@ export function parseProject(projectDir: string, options?: ParseOptions): FlowGr
       allLinks.push(...nextConfig.links);
       applyBasePath(allLinks, nextConfig.basePath);
 
+      const nextjsAppStateScreens = allRoutes.flatMap((route) => {
+        if (!route.componentFilePath) return [];
+        return detectStateScreens(route.componentFilePath, route.path);
+      });
       graph = buildFlowGraph(allRoutes, allLinks, {
         projectName,
         framework: 'nextjs-app',
-      });
+      }, nextjsAppStateScreens);
       break;
     }
 
@@ -171,10 +184,14 @@ export function parseProject(projectDir: string, options?: ParseOptions): FlowGr
       allLinks.push(...nextConfig.links);
       applyBasePath(allLinks, nextConfig.basePath);
 
+      const nextjsPagesStateScreens = allRoutes.flatMap((route) => {
+        if (!route.componentFilePath) return [];
+        return detectStateScreens(route.componentFilePath, route.path);
+      });
       graph = buildFlowGraph(allRoutes, allLinks, {
         projectName,
         framework: 'nextjs-pages',
-      });
+      }, nextjsPagesStateScreens);
       break;
     }
 

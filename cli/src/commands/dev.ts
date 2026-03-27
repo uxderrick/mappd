@@ -6,6 +6,7 @@ import { parseAndWriteGraph, parseWithConfig } from '../parse.js';
 import { captureScreenshots } from '../screenshot.js';
 import { detectTargetPort } from '../detect-port.js';
 import { loadSavedConfig, promptForConfig } from '../prompt.js';
+import { ensureGitignore } from '../gitignore.js';
 import pc from 'picocolors';
 
 interface DevOptions {
@@ -31,6 +32,9 @@ export async function devCommand(options: DevOptions) {
     console.log(pc.dim('  Run this command from your project root, or use --dir'));
     process.exit(1);
   }
+
+  // Ensure .gitignore protects Mappd files
+  ensureGitignore(projectDir);
 
   // Step 1: Wait for target dev server
   await waitForDevServer(targetPort);

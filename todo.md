@@ -69,7 +69,7 @@ Priorities: `P0` (critical/blocking), `P1` (important), `P2` (nice-to-have), `P3
     4. Matches Figma's model exactly — left = layers list, right = properties of selected
 
 ### Bugs / Polish
-- [ ] **Auto re-layout on viewport change** — Changing viewport (Desktop→Mobile) changes node height, causing nodes to overlap. Should auto re-run dagre layout when viewport preset changes `[P1]` `[added: 2026-03-27]`
+- [x] **Auto re-layout on viewport change** — Changing viewport (Desktop→Mobile) changes node height, causing nodes to overlap. Auto re-runs dagre layout when viewport preset changes `[P1]` `[done: 2026-03-27]`
 
 ### Phase 2+ Backlog
 - [ ] **Per-node DevTools panel** — Console, Network, Application tabs per screen node `[P1]` `[added: 2026-03-23]`

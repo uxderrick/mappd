@@ -160,8 +160,8 @@
       "triggerLabel": "Click: + New Project",
       "sourceCodeLocation": {
         "file": "/Users/uxderrick-mac/Development/flowcanvas/demo-app/src/pages/DashboardPage.tsx",
-        "line": 24,
-        "column": 8
+        "line": 44,
+        "column": 10
       }
     },
     {
@@ -172,7 +172,7 @@
       "triggerLabel": "Link: /dashboard/users/:id",
       "sourceCodeLocation": {
         "file": "/Users/uxderrick-mac/Development/flowcanvas/demo-app/src/pages/DashboardPage.tsx",
-        "line": 30,
+        "line": 51,
         "column": 10
       }
     },
@@ -184,7 +184,7 @@
       "triggerLabel": "Click: Sign Out",
       "sourceCodeLocation": {
         "file": "/Users/uxderrick-mac/Development/flowcanvas/demo-app/src/pages/DashboardPage.tsx",
-        "line": 71,
+        "line": 162,
         "column": 10
       }
     },
@@ -196,7 +196,7 @@
       "triggerLabel": "Click: Back to Dashboard",
       "sourceCodeLocation": {
         "file": "/Users/uxderrick-mac/Development/flowcanvas/demo-app/src/pages/SettingsPage.tsx",
-        "line": 17,
+        "line": 39,
         "column": 8
       }
     },
@@ -268,8 +268,8 @@
       "triggerLabel": "Link: /dashboard/users/:id",
       "sourceCodeLocation": {
         "file": "/Users/uxderrick-mac/Development/flowcanvas/demo-app/src/pages/AnalyticsPage.tsx",
-        "line": 39,
-        "column": 14
+        "line": 85,
+        "column": 18
       }
     },
     {
@@ -297,10 +297,132 @@
       }
     }
   ],
+  "stateScreens": [
+    {
+      "parentRoutePath": "/dashboard",
+      "parentComponentFile": "/Users/uxderrick-mac/Development/flowcanvas/demo-app/src/pages/DashboardPage.tsx",
+      "name": "Add Modal: div",
+      "hookType": "useState",
+      "hookIndex": 0,
+      "stateValue": true,
+      "componentName": "div",
+      "confidence": "medium",
+      "sourceLine": 62,
+      "sourceColumn": 7
+    },
+    {
+      "parentRoutePath": "/dashboard/settings",
+      "parentComponentFile": "/Users/uxderrick-mac/Development/flowcanvas/demo-app/src/pages/SettingsPage.tsx",
+      "name": "General: div",
+      "hookType": "useState",
+      "hookIndex": 0,
+      "stateValue": "general",
+      "componentName": "div",
+      "confidence": "high",
+      "sourceLine": 67,
+      "sourceColumn": 7
+    },
+    {
+      "parentRoutePath": "/dashboard/settings",
+      "parentComponentFile": "/Users/uxderrick-mac/Development/flowcanvas/demo-app/src/pages/SettingsPage.tsx",
+      "name": "Notifications: div",
+      "hookType": "useState",
+      "hookIndex": 0,
+      "stateValue": "notifications",
+      "componentName": "div",
+      "confidence": "high",
+      "sourceLine": 106,
+      "sourceColumn": 7
+    },
+    {
+      "parentRoutePath": "/dashboard/settings",
+      "parentComponentFile": "/Users/uxderrick-mac/Development/flowcanvas/demo-app/src/pages/SettingsPage.tsx",
+      "name": "Security: div",
+      "hookType": "useState",
+      "hookIndex": 0,
+      "stateValue": "security",
+      "componentName": "div",
+      "confidence": "high",
+      "sourceLine": 153,
+      "sourceColumn": 7
+    },
+    {
+      "parentRoutePath": "/dashboard/create-project",
+      "parentComponentFile": "/Users/uxderrick-mac/Development/flowcanvas/demo-app/src/pages/CreateProjectPage.tsx",
+      "name": "Step 0: div",
+      "hookType": "useState",
+      "hookIndex": 0,
+      "stateValue": 0,
+      "componentName": "div",
+      "confidence": "high",
+      "sourceLine": 49,
+      "sourceColumn": 9
+    },
+    {
+      "parentRoutePath": "/dashboard/create-project",
+      "parentComponentFile": "/Users/uxderrick-mac/Development/flowcanvas/demo-app/src/pages/CreateProjectPage.tsx",
+      "name": "Step 1: div",
+      "hookType": "useState",
+      "hookIndex": 0,
+      "stateValue": 1,
+      "componentName": "div",
+      "confidence": "high",
+      "sourceLine": 64,
+      "sourceColumn": 9
+    },
+    {
+      "parentRoutePath": "/dashboard/create-project",
+      "parentComponentFile": "/Users/uxderrick-mac/Development/flowcanvas/demo-app/src/pages/CreateProjectPage.tsx",
+      "name": "Step 2: div",
+      "hookType": "useState",
+      "hookIndex": 0,
+      "stateValue": 2,
+      "componentName": "div",
+      "confidence": "high",
+      "sourceLine": 84,
+      "sourceColumn": 9
+    },
+    {
+      "parentRoutePath": "/dashboard/analytics",
+      "parentComponentFile": "/Users/uxderrick-mac/Development/flowcanvas/demo-app/src/pages/AnalyticsPage.tsx",
+      "name": "Overview: Fragment",
+      "hookType": "useReducer",
+      "hookIndex": 0,
+      "stateValue": "overview",
+      "componentName": "Fragment",
+      "confidence": "high",
+      "sourceLine": 66,
+      "sourceColumn": 7
+    },
+    {
+      "parentRoutePath": "/dashboard/analytics",
+      "parentComponentFile": "/Users/uxderrick-mac/Development/flowcanvas/demo-app/src/pages/AnalyticsPage.tsx",
+      "name": "Detailed: div",
+      "hookType": "useReducer",
+      "hookIndex": 0,
+      "stateValue": "detailed",
+      "componentName": "div",
+      "confidence": "high",
+      "sourceLine": 96,
+      "sourceColumn": 7
+    },
+    {
+      "parentRoutePath": "/dashboard/analytics",
+      "parentComponentFile": "/Users/uxderrick-mac/Development/flowcanvas/demo-app/src/pages/AnalyticsPage.tsx",
+      "name": "Comparison: div",
+      "hookType": "useReducer",
+      "hookIndex": 0,
+      "stateValue": "comparison",
+      "componentName": "div",
+      "confidence": "high",
+      "sourceLine": 142,
+      "sourceColumn": 7
+    }
+  ],
   "metadata": {
     "projectName": "demo-app",
     "framework": "react-router",
-    "generatedAt": "2026-03-27T02:24:21.540Z",
+    "generatedAt": "2026-03-27T03:05:15.510Z",
     "mappdVersion": "0.1.0"
   }
 }

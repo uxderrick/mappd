@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   ReactFlow,
   MiniMap,
@@ -219,11 +219,25 @@ function AppInner() {
   const handleToggleEdges = useCallback(() => setShowEdges((v) => !v), []);
   const handleToggleLabels = useCallback(() => setShowLabels((v) => !v), []);
 
+  const vpDims = VIEWPORT_PRESETS[viewportPreset];
+  // Actual rendered node height: iframe height scaled to 480px width + label padding
+  const nodeHeight = Math.round(vpDims.height * (480 / vpDims.width)) + 30;
+
+  // Auto re-layout when viewport preset changes (node heights change, prevents overlap)
+  const prevViewportRef = useRef(viewportPreset);
+  useEffect(() => {
+    if (prevViewportRef.current === viewportPreset) return;
+    prevViewportRef.current = viewportPreset;
+    if (!graphData) return;
+    const relaid = layoutGraph(graphData.baseNodes, graphData.edges, layoutDirection, nodeHeight);
+    setGraphData((prev) => prev ? { ...prev, baseNodes: relaid } : prev);
+  }, [viewportPreset, graphData, layoutDirection, nodeHeight]);
+
   const handleReLayout = useCallback(() => {
     if (!graphData) return;
-    const relaid = layoutGraph(graphData.baseNodes, graphData.edges, layoutDirection);
+    const relaid = layoutGraph(graphData.baseNodes, graphData.edges, layoutDirection, nodeHeight);
     setGraphData((prev) => prev ? { ...prev, baseNodes: relaid } : prev);
-  }, [graphData, layoutDirection]);
+  }, [graphData, layoutDirection, nodeHeight]);
 
   const handleLayoutDirectionChange = useCallback((dir: LayoutDirection) => {
     setLayoutDirection(dir);
@@ -236,8 +250,6 @@ function AppInner() {
   const handleToggleLive = useCallback((nodeId: string) => {
     setLiveOverrides((prev) => ({ ...prev, [nodeId]: prev[nodeId] === false ? true : false }));
   }, []);
-
-  const vpDims = VIEWPORT_PRESETS[viewportPreset];
 
   // Route info list for control panel
   const routeInfoList: RouteInfo[] = useMemo(

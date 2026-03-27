@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -17,13 +18,33 @@ const NAV_ITEMS = [
 ];
 
 function DashboardHome() {
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [quickName, setQuickName] = useState('');
+  const [quickDesc, setQuickDesc] = useState('');
+
+  const handleQuickAdd = () => {
+    alert(`Project created: ${quickName}`);
+    setQuickName('');
+    setQuickDesc('');
+    setShowAddModal(false);
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h2>Team Members</h2>
-        <Link to="/dashboard/create-project" className="btn btn-primary" style={{ fontSize: 13, padding: '6px 14px' }}>
-          + New Project
-        </Link>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            className="btn btn-primary"
+            style={{ fontSize: 13, padding: '6px 14px' }}
+            onClick={() => setShowAddModal(true)}
+          >
+            Quick Add
+          </button>
+          <Link to="/dashboard/create-project" className="btn btn-primary" style={{ fontSize: 13, padding: '6px 14px' }}>
+            + New Project
+          </Link>
+        </div>
       </div>
       <div className="user-grid">
         {USERS.map((user) => (
@@ -36,6 +57,76 @@ function DashboardHome() {
           </Link>
         ))}
       </div>
+
+      {/* Quick Add Modal — boolean toggle pattern for state detector */}
+      {showAddModal && (
+        <div
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.5)', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+          }}
+          onClick={() => setShowAddModal(false)}
+        >
+          <div
+            className="card"
+            style={{ width: 420, padding: 24, background: '#fff', borderRadius: 12 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 18 }}>Quick Add Project</h3>
+            <div className="form-group">
+              <label htmlFor="quickName">Project Name</label>
+              <input
+                id="quickName"
+                type="text"
+                placeholder="Enter project name"
+                value={quickName}
+                onChange={(e) => setQuickName(e.target.value)}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="quickDesc">Description</label>
+              <textarea
+                id="quickDesc"
+                placeholder="Brief description of the project"
+                value={quickDesc}
+                onChange={(e) => setQuickDesc(e.target.value)}
+                rows={3}
+                style={{
+                  width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0',
+                  borderRadius: 6, fontSize: 14, fontFamily: 'inherit', resize: 'vertical',
+                }}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="quickPriority">Priority</label>
+              <select
+                id="quickPriority"
+                style={{
+                  width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0',
+                  borderRadius: 6, fontSize: 14, background: '#fff',
+                }}
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button
+                className="btn"
+                style={{ flex: 1, background: '#e2e8f0', color: '#1e293b' }}
+                onClick={() => setShowAddModal(false)}
+              >
+                Cancel
+              </button>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleQuickAdd}>
+                Create Project
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
