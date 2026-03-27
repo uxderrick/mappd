@@ -177,7 +177,7 @@ export default function ControlPanel({
   const handleExportPng = useCallback(() => {
     const viewport = document.querySelector('.react-flow__viewport') as HTMLElement;
     if (!viewport) return;
-    const bgColor = canvasTheme === 'dark' ? '#0c0c0e' : '#f5f5f5';
+    const bgColor = canvasTheme === 'dark' ? '#0c0c0e' : '#e4e4e8';
     toPng(viewport, {
       backgroundColor: bgColor,
       pixelRatio: 2,
@@ -202,7 +202,7 @@ export default function ControlPanel({
   const handleExportPdf = useCallback(() => {
     const viewport = document.querySelector('.react-flow__viewport') as HTMLElement;
     if (!viewport) return;
-    const bgColor = canvasTheme === 'dark' ? '#0c0c0e' : '#f5f5f5';
+    const bgColor = canvasTheme === 'dark' ? '#0c0c0e' : '#e4e4e8';
     toPng(viewport, {
       backgroundColor: bgColor,
       pixelRatio: 2,

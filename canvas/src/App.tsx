@@ -482,8 +482,8 @@ function AppInner() {
         >
           <MiniMap
             nodeColor="#a78bfa"
-            maskColor={canvasTheme === 'light' ? 'rgba(245,245,245,0.75)' : 'rgba(9, 9, 11, 0.75)'}
-            style={{ backgroundColor: canvasTheme === 'light' ? '#e5e5e5' : '#141416' }}
+            maskColor={canvasTheme === 'light' ? 'rgba(228,228,232,0.75)' : 'rgba(9, 9, 11, 0.75)'}
+            style={{ backgroundColor: canvasTheme === 'light' ? '#d4d4d8' : '#141416' }}
           />
           <Controls />
           <Background

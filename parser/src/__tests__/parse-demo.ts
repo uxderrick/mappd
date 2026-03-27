@@ -1,9 +1,9 @@
 import path from 'node:path';
 import { parseProject, parseAndWrite } from '../index.js';
 
-const DEMO_APP_DIR = path.resolve(import.meta.dirname, '../../../demo-app');
+const DEMO_APP_DIR = path.resolve(import.meta.dirname, '../../../demo-react-router-v6');
 
-console.log('Parsing demo-app at:', DEMO_APP_DIR);
+console.log('Parsing demo-react-router-v6 at:', DEMO_APP_DIR);
 console.log('---');
 
 try {
@@ -45,7 +45,7 @@ try {
 
   // Write to .mappd/flow-graph.json
   parseAndWrite(DEMO_APP_DIR);
-  console.log('\nWritten to demo-app/.mappd/flow-graph.json');
+  console.log('\nWritten to demo-react-router-v6/.mappd/flow-graph.json');
 } catch (err) {
   console.error('Parse failed:', err);
   process.exit(1);

@@ -108,9 +108,9 @@ Priorities: `P0` (critical/blocking), `P1` (important), `P2` (nice-to-have), `P3
 - [ ] **State-driven screen detection** — AST analysis for useState/useReducer patterns `[P2]` `[added: 2026-03-23]`
 - [ ] **Manual flow correction UI** — Drag to create/remove connections `[P2]` `[added: 2026-03-23]`
 - [ ] **VS Code extension** — Canvas in a webview panel `[P2]` `[added: 2026-03-23]`
-- [ ] **Export canvas as image/PDF** `[P3]` `[added: 2026-03-23]`
+- [x] **Export canvas as image/PDF** — PNG + PDF export built into control panel `[P3]` `[done: 2026-03-27]`
 - [ ] **AI-assisted flow inference** `[P3]` `[added: 2026-03-23]`
-- [ ] **Interactive CLI fallback** — If auto-detect fails, prompt user to pick framework + entry point. Save to `.flowcanvas/config.json` so they only answer once. `[P1]` `[added: 2026-03-26]`
+- [x] **Interactive CLI fallback** — 3-question prompt when auto-detect fails: framework (4 choices with dep scanning to highlight detected), entry point (with validation + 3 retries), port (auto-detected from package.json scripts). Saves to `.mappd/config.json`. `[P1]` `[done: 2026-03-27]`
 
 ### Multi-Framework Router Support (researched 2026-03-26)
 

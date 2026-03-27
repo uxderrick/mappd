@@ -1303,20 +1303,36 @@ html, body, #root {
 /* ── Light theme ── */
 
 .fc-theme-light {
-  background: #f5f5f5 !important;
+  background: #e4e4e8 !important;
 }
 
 .fc-theme-light .react-flow__edge-path {
-  stroke: #6d28d9;
+  stroke: #7c3aed;
+  opacity: 0.35;
 }
 
 .fc-theme-light .react-flow__edge-textbg {
-  fill: #e5e5e5;
-  stroke: rgba(0, 0, 0, 0.1);
+  fill: #d4d4d8;
+  stroke: rgba(0, 0, 0, 0.08);
 }
 
 .fc-theme-light .react-flow__edge-text {
   fill: #52525b;
+}
+
+.fc-theme-light .react-flow__controls-button {
+  background: #d4d4d8;
+  border-color: rgba(0, 0, 0, 0.08);
+  fill: #52525b;
+}
+
+.fc-theme-light .react-flow__controls-button:hover {
+  background: #c4c4c8;
+  fill: #27272a;
+}
+
+.fc-theme-light .react-flow__minimap {
+  background-color: #d4d4d8;
 }
 
 /* ── Hidden label ── */
