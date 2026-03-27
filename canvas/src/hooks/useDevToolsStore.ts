@@ -25,7 +25,27 @@ export function useDevToolsStore(routeToNodeId: Record<string, string>) {
       if (!msg || typeof msg.type !== 'string' || !msg.type.startsWith('fc-devtools-')) return;
 
       const route = msg.route;
-      const nodeId = routeMapRef.current[route];
+      let nodeId = routeMapRef.current[route];
+
+      // Fallback: try dynamic pattern matching (e.g., /users/1 matches /users/:id)
+      if (!nodeId) {
+        const patterns = (routeMapRef.current as any).__dynamicPatterns as { pattern: string; nodeId: string }[] | undefined;
+        if (patterns) {
+          for (const { pattern, nodeId: nId } of patterns) {
+            const patternParts = pattern.split('/');
+            const routeParts = route.split('/');
+            if (patternParts.length !== routeParts.length) continue;
+            const matches = patternParts.every((p: string, i: number) =>
+              p.startsWith(':') || p === routeParts[i]
+            );
+            if (matches) {
+              nodeId = nId;
+              break;
+            }
+          }
+        }
+      }
+
       if (!nodeId) return;
 
       const state = getOrCreate(nodeId);

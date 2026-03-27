@@ -185,11 +185,21 @@ function AppInner() {
   const { globalAuth, setAuth, setPinForNode, clearPinForNode, getPinForNode, hasPinForNode } = usePinnedState();
 
   // DevTools: build route→nodeId map for message attribution
+  // Build route→nodeId map for DevTools message attribution
+  // Also map resolved dynamic paths (e.g., /users/1 → users-id node)
   const routeToNodeId = useMemo(() => {
     const map: Record<string, string> = {};
+    const dynamicPatterns: { pattern: string; nodeId: string }[] = [];
+
     for (const n of (graphData?.baseNodes ?? [])) {
       map[n.data.routePath] = n.id;
-      // Also map resolved paths (with :param replaced by actual values)
+
+      // Track dynamic route patterns for fallback matching
+      if (n.data.isDynamic) {
+        dynamicPatterns.push({ pattern: n.data.routePath, nodeId: n.id });
+      }
+
+      // Map resolved paths with pinned params
       const pin = getPinForNode(n.id);
       if (pin?.urlParams) {
         let resolved = n.data.routePath;
@@ -198,7 +208,16 @@ function AppInner() {
         }
         if (resolved !== n.data.routePath) map[resolved] = n.id;
       }
+
+      // Map default resolved paths (replace :param with 1)
+      if (n.data.isDynamic) {
+        const defaultResolved = n.data.routePath.replace(/:(\w+)/g, '1');
+        map[defaultResolved] = n.id;
+      }
     }
+
+    // Store patterns for dynamic matching (used by the store hook)
+    (map as any).__dynamicPatterns = dynamicPatterns;
     return map;
   }, [graphData, getPinForNode]);
 

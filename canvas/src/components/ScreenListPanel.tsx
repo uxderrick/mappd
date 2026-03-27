@@ -41,7 +41,13 @@ export default function ScreenListPanel({
             className={`fc-sl-item ${s.id === activeNodeId ? 'is-active' : ''}`}
             onClick={() => handleClick(s.id)}
           >
-            <span className="fc-sl-route">{s.routePath}</span>
+            <div className="fc-sl-item-row">
+              <svg className="fc-sl-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="9" y1="3" x2="9" y2="21" />
+              </svg>
+              <span className="fc-sl-route">{s.routePath}</span>
+            </div>
             <span className="fc-sl-component">{s.componentName}</span>
           </button>
         ))}

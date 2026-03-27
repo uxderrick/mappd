@@ -99,11 +99,9 @@ html, body, #root {
 }
 
 .fc-sl-title {
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--fc-text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fc-text-secondary);
 }
 
 .fc-sl-count {
@@ -141,7 +139,7 @@ html, body, #root {
 }
 
 .fc-sl-item.is-active {
-  background: var(--fc-accent-glow);
+  background: rgba(167, 139, 250, 0.1);
   border-left-color: var(--fc-accent);
 }
 
@@ -155,6 +153,21 @@ html, body, #root {
 }
 
 .fc-sl-item.is-active .fc-sl-route {
+  color: var(--fc-accent);
+}
+
+.fc-sl-item-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fc-sl-icon {
+  color: var(--fc-text-ghost);
+  flex-shrink: 0;
+}
+
+.fc-sl-item.is-active .fc-sl-icon {
   color: var(--fc-accent);
 }
 
@@ -717,19 +730,16 @@ html, body, #root {
 
 .fc-cp-header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 8px;
   padding: 12px 12px 10px;
   border-bottom: 1px solid var(--fc-border);
-  min-height: 40px;
 }
 
 .fc-cp-header-selected {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  flex: 1;
-  min-width: 0;
 }
 
 .fc-cp-header-name {
@@ -752,8 +762,6 @@ html, body, #root {
 .fc-cp-icon-bar {
   display: flex;
   gap: 2px;
-  flex-shrink: 0;
-  margin-left: 8px;
 }
 
 .fc-cp-icon-btn {
@@ -815,7 +823,7 @@ html, body, #root {
 
 .fc-cp-section {
   padding: 10px 12px;
-  border-bottom: 1px solid var(--fc-border);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .fc-cp-section:last-child {
@@ -823,11 +831,10 @@ html, body, #root {
 }
 
 .fc-cp-section-title {
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--fc-text-ghost);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--fc-text-secondary);
   margin: 0 0 8px 0;
   display: flex;
   align-items: center;
@@ -885,31 +892,31 @@ html, body, #root {
   background: none;
   border: none;
   cursor: pointer;
-  gap: 4px;
+  gap: 6px;
 }
 
 .fc-cp-section-toggle:hover .fc-cp-section-title {
-  color: var(--fc-text-muted);
+  color: var(--fc-text-primary);
 }
 
-.fc-cp-collapse-arrow {
-  font-size: 9px;
+/* SVG chevron for collapsible sections */
+.fc-cp-chevron {
   color: var(--fc-text-ghost);
   transition: transform var(--fc-transition);
   flex-shrink: 0;
 }
 
-.fc-cp-collapse-arrow.is-open {
+.fc-cp-chevron.is-open {
   transform: rotate(0deg);
 }
 
-.fc-cp-collapse-arrow:not(.is-open) {
+.fc-cp-chevron:not(.is-open) {
   transform: rotate(-90deg);
 }
 
 .fc-cp-collapse-arrow-label {
   font-family: var(--fc-font);
-  font-size: 9px;
+  font-size: 10px;
   color: var(--fc-text-ghost);
   margin-left: auto;
   margin-right: 4px;
@@ -1203,12 +1210,19 @@ html, body, #root {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-height: 26px;
 }
 
 .fc-cp-toggle-label {
   font-family: var(--fc-font-sans);
   font-size: 11px;
   color: var(--fc-text-secondary);
+}
+
+.fc-cp-toggle-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 /* Segmented control */
@@ -1224,13 +1238,13 @@ html, body, #root {
 }
 
 .fc-cp-seg-btn {
-  padding: 3px 8px;
+  padding: 5px 10px;
   background: var(--fc-bg-void);
   border: none;
   border-right: 1px solid var(--fc-border);
   color: var(--fc-text-muted);
   font-family: var(--fc-font-sans);
-  font-size: 10px;
+  font-size: 11px;
   cursor: pointer;
   transition: all var(--fc-transition);
   flex: 1;

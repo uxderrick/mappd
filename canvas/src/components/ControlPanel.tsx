@@ -289,7 +289,7 @@ export default function ControlPanel({
 
             {/* ── Pin State ── */}
             <section className="fc-cp-section">
-              <h4 className="fc-cp-section-title">Pin State</h4>
+              <h4 className="fc-cp-section-title">Pin state</h4>
               <div style={{ marginBottom: paramNames.length > 0 ? 10 : 0 }}>
                 <div className="fc-cp-toggle-row" style={{ marginBottom: 4 }}>
                   <span className="fc-cp-toggle-label">
@@ -389,7 +389,7 @@ export default function ControlPanel({
           <button className="fc-cp-section-toggle" onClick={() => toggleSection('zoom')}>
             <span className="fc-cp-section-title" style={{ margin: 0 }}>Zoom</span>
             <span className="fc-cp-zoom-value" style={{ marginLeft: 'auto', marginRight: 6 }}>{zoomPercent}%</span>
-            <span className={`fc-cp-collapse-arrow ${openSections.zoom ? 'is-open' : ''}`}>▾</span>
+            <svg className={`fc-cp-chevron ${openSections.zoom ? 'is-open' : ''}`} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
           </button>
           {openSections.zoom && (
             <div className="fc-cp-section-body">
@@ -415,7 +415,7 @@ export default function ControlPanel({
           <button className="fc-cp-section-toggle" onClick={() => toggleSection('viewport')}>
             <span className="fc-cp-section-title" style={{ margin: 0 }}>Viewport</span>
             <span className="fc-cp-collapse-arrow-label">{VIEWPORT_PRESETS[currentViewport].label}</span>
-            <span className={`fc-cp-collapse-arrow ${openSections.viewport ? 'is-open' : ''}`}>▾</span>
+            <svg className={`fc-cp-chevron ${openSections.viewport ? 'is-open' : ''}`} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
           </button>
           {openSections.viewport && (
             <div className="fc-cp-section-body">
@@ -435,7 +435,7 @@ export default function ControlPanel({
         <section className="fc-cp-section">
           <button className="fc-cp-section-toggle" onClick={() => toggleSection('display')}>
             <span className="fc-cp-section-title" style={{ margin: 0 }}>Display</span>
-            <span className={`fc-cp-collapse-arrow ${openSections.display ? 'is-open' : ''}`}>▾</span>
+            <svg className={`fc-cp-chevron ${openSections.display ? 'is-open' : ''}`} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
           </button>
           {openSections.display && (
             <div className="fc-cp-section-body">
@@ -455,9 +455,9 @@ export default function ControlPanel({
                   <span className="fc-cp-toggle-label">Labels</span>
                   <button className={`fc-cp-pill-toggle ${showLabels ? 'is-on' : ''}`} onClick={onToggleLabels}><span className="fc-cp-pill-knob" /></button>
                 </div>
-                <div className="fc-cp-toggle-row">
-                  <span className="fc-cp-toggle-label">Edge Style</span>
-                  <div className="fc-cp-segmented">
+                <div className="fc-cp-toggle-col">
+                  <span className="fc-cp-toggle-label">Edge style</span>
+                  <div className="fc-cp-segmented fc-cp-segmented-full">
                     {(['solid', 'dashed', 'animated'] as EdgeStyle[]).map((s) => (
                       <button key={s} className={`fc-cp-seg-btn ${edgeStyle === s ? 'is-active' : ''}`} onClick={() => onEdgeStyleChange(s)}>{s.charAt(0).toUpperCase() + s.slice(1)}</button>
                     ))}
@@ -473,7 +473,7 @@ export default function ControlPanel({
           <button className="fc-cp-section-toggle" onClick={() => toggleSection('layout')}>
             <span className="fc-cp-section-title" style={{ margin: 0 }}>Layout</span>
             <span className="fc-cp-collapse-arrow-label">{layoutDirection}</span>
-            <span className={`fc-cp-collapse-arrow ${openSections.layout ? 'is-open' : ''}`}>▾</span>
+            <svg className={`fc-cp-chevron ${openSections.layout ? 'is-open' : ''}`} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
           </button>
           {openSections.layout && (
             <div className="fc-cp-section-body">
@@ -496,7 +496,7 @@ export default function ControlPanel({
         <section className="fc-cp-section">
           <button className="fc-cp-section-toggle" onClick={() => toggleSection('export')}>
             <span className="fc-cp-section-title" style={{ margin: 0 }}>Export</span>
-            <span className={`fc-cp-collapse-arrow ${openSections.export ? 'is-open' : ''}`}>▾</span>
+            <svg className={`fc-cp-chevron ${openSections.export ? 'is-open' : ''}`} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
           </button>
           {openSections.export && (
             <div className="fc-cp-section-body">
