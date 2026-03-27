@@ -7,6 +7,205 @@
 (function () {
   if (window.self === window.top) return;
 
+  // =============================================
+  // React DevTools Hook — MUST run before React loads
+  // Installs the global hook that React registers with.
+  // This gives us access to overrideHookState for state injection.
+  // =============================================
+
+  if (!window.__REACT_DEVTOOLS_GLOBAL_HOOK__) {
+    var renderers = new Map();
+    window.__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
+      renderers: renderers,
+      supportsFiber: true,
+      inject: function (renderer) {
+        var id = renderers.size + 1;
+        renderers.set(id, renderer);
+        return id;
+      },
+      onCommitFiberRoot: function () {},
+      onCommitFiberUnmount: function () {},
+      onPostCommitFiberRoot: function () {},
+      onScheduleFibersWithFamiliesChanged: function () {},
+    };
+  }
+
+  /**
+   * Get the React renderer (for overrideHookState access).
+   * Returns the first renderer that has overrideHookState.
+   */
+  function getRenderer() {
+    var hook = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
+    if (!hook || !hook.renderers) return null;
+    var entries = hook.renderers;
+    // Map.values() iterator
+    if (typeof entries.values === 'function') {
+      var iter = entries.values();
+      var next = iter.next();
+      while (!next.done) {
+        if (next.value && typeof next.value.overrideHookState === 'function') {
+          return next.value;
+        }
+        next = iter.next();
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Find the React fiber root from the DOM.
+   * React attaches fibers to DOM nodes via __reactFiber$ properties.
+   */
+  function getFiberRoot() {
+    var root = document.getElementById('root') || document.getElementById('__next') || document.body.firstElementChild;
+    if (!root) return null;
+    // Find the __reactFiber$ key
+    var keys = Object.keys(root);
+    for (var i = 0; i < keys.length; i++) {
+      if (keys[i].startsWith('__reactFiber$') || keys[i].startsWith('__reactInternalInstance$')) {
+        return root[keys[i]];
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Walk the fiber tree and find a fiber whose memoizedState chain
+   * has a hook at the given index matching a specific value pattern.
+   * Returns the fiber if found.
+   */
+  function findFiberWithHook(fiber, hookIndex) {
+    if (!fiber) return null;
+
+    // Check this fiber's hooks
+    var state = fiber.memoizedState;
+    var idx = 0;
+    while (state) {
+      if (idx === hookIndex && state.queue) {
+        return fiber;
+      }
+      state = state.next;
+      idx++;
+    }
+
+    // Recurse into children
+    var child = fiber.child;
+    while (child) {
+      var found = findFiberWithHook(child, hookIndex);
+      if (found) return found;
+      child = child.sibling;
+    }
+
+    return null;
+  }
+
+  /**
+   * Walk fibers to find one whose hook at hookIndex currently holds currentValue.
+   * This is more precise than just matching hookIndex alone.
+   */
+  function findFiberByHookValue(fiber, hookIndex, currentValue) {
+    if (!fiber) return null;
+
+    var state = fiber.memoizedState;
+    var idx = 0;
+    while (state) {
+      if (idx === hookIndex && state.queue) {
+        var val = state.memoizedState;
+        // For useReducer, the state might be an object
+        if (val === currentValue) return fiber;
+        if (typeof val === 'object' && val !== null && typeof currentValue === 'object' && currentValue !== null) {
+          try {
+            if (JSON.stringify(val) === JSON.stringify(currentValue)) return fiber;
+          } catch (_) {}
+        }
+      }
+      state = state.next;
+      idx++;
+    }
+
+    var child = fiber.child;
+    while (child) {
+      var found = findFiberByHookValue(child, hookIndex, currentValue);
+      if (found) return found;
+      child = child.sibling;
+    }
+
+    return null;
+  }
+
+  // =============================================
+  // Handle state override requests from parent canvas
+  // =============================================
+
+  window.addEventListener('message', function (e) {
+    if (!e.data || e.data.type !== 'fc-override-state') return;
+
+    var hookIndex = e.data.hookIndex;
+    var newValue = e.data.value;
+    var hookType = e.data.hookType; // 'useState' or 'useReducer'
+
+    var renderer = getRenderer();
+    if (!renderer || typeof renderer.overrideHookState !== 'function') {
+      window.parent.postMessage({
+        type: 'fc-override-state-result',
+        success: false,
+        error: 'React renderer not found or overrideHookState not available',
+        route: originalPathname,
+      }, '*');
+      return;
+    }
+
+    // Find the fiber root
+    var fiberRoot = getFiberRoot();
+    if (!fiberRoot) {
+      window.parent.postMessage({
+        type: 'fc-override-state-result',
+        success: false,
+        error: 'Could not find React fiber root in DOM',
+        route: originalPathname,
+      }, '*');
+      return;
+    }
+
+    // Walk up to the root fiber
+    var root = fiberRoot;
+    while (root.return) root = root.return;
+
+    // Find the fiber with the matching hook
+    var targetFiber = findFiberWithHook(root, hookIndex);
+
+    if (!targetFiber) {
+      window.parent.postMessage({
+        type: 'fc-override-state-result',
+        success: false,
+        error: 'Could not find fiber with hook at index ' + hookIndex,
+        route: originalPathname,
+      }, '*');
+      return;
+    }
+
+    try {
+      // overrideHookState(fiber, hookIndex, path, value)
+      // path is [] for direct replacement of the entire hook value
+      renderer.overrideHookState(targetFiber, hookIndex, [], newValue);
+
+      window.parent.postMessage({
+        type: 'fc-override-state-result',
+        success: true,
+        route: originalPathname,
+        hookIndex: hookIndex,
+        value: newValue,
+      }, '*');
+    } catch (err) {
+      window.parent.postMessage({
+        type: 'fc-override-state-result',
+        success: false,
+        error: err ? err.message : 'Unknown error',
+        route: originalPathname,
+      }, '*');
+    }
+  });
+
   // The route this iframe is responsible for — it should never leave this URL
   var originalUrl = window.location.href;
   var originalPathname = window.location.pathname;

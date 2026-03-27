@@ -26,6 +26,7 @@ export interface ScreenNodeData {
   forceLive?: boolean;
   reloadKey?: number;
   hideLabel?: boolean;
+  onDoubleClick?: (nodeId: string) => void;
   onRequestLoad?: (nodeId: string) => void;
   onIframeLoaded?: (nodeId: string) => void;
   onOpenPinEditor?: (nodeId: string) => void;

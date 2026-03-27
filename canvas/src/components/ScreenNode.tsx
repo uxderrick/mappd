@@ -2,7 +2,7 @@ import { memo, useRef, useEffect, useState, useCallback } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import type { ScreenNodeData } from '../types';
 import { sendPinToIframe } from '../lib/pinBridge';
-import DevToolsPanel from './DevToolsPanel';
+import { registerIframe, unregisterIframe } from '../lib/iframeRegistry';
 
 type ScreenNodeType = Node<ScreenNodeData, 'screenNode'>;
 
@@ -10,14 +10,12 @@ function ScreenNode({ data }: NodeProps<ScreenNodeType>) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [isLive, setIsLive] = useState(false);
   const [iframeReady, setIframeReady] = useState(false);
-  const [devToolsOpen, setDevToolsOpen] = useState(false);
   const zoomLevel = data.zoomLevel ?? 0.5;
   const canGoLive = data.canGoLive ?? false;
   const forceLive = data.forceLive;
   const reloadKey = data.reloadKey ?? 0;
   const hideLabel = data.hideLabel ?? false;
-  const devToolsState = data.devToolsState;
-  const errorCount = devToolsState?.console.filter(e => e.level === 'error').length ?? 0;
+  const nodeId = data.nodeId ?? '';
 
   const iframeWidth = data.viewportWidth ?? 1280;
   const iframeHeight = data.viewportHeight ?? 800;
@@ -43,18 +41,26 @@ function ScreenNode({ data }: NodeProps<ScreenNodeType>) {
   const handleGoLive = useCallback(() => {
     if (!isLive) {
       setIsLive(true);
-      data.onRequestLoad?.(data.nodeId ?? '');
+      data.onRequestLoad?.(nodeId);
     }
-  }, [isLive, data]);
+  }, [isLive, data, nodeId]);
 
   const handleIframeLoad = useCallback(() => {
     setIframeReady(true);
-    data.onIframeLoaded?.(data.nodeId ?? '');
+    data.onIframeLoaded?.(nodeId);
 
-    if (iframeRef.current && data.pinnedState) {
-      sendPinToIframe(iframeRef.current, data.pinnedState);
+    if (iframeRef.current) {
+      registerIframe(nodeId, iframeRef.current);
+      if (data.pinnedState) {
+        sendPinToIframe(iframeRef.current, data.pinnedState);
+      }
     }
-  }, [data]);
+  }, [data, nodeId]);
+
+  // Unregister on unmount
+  useEffect(() => {
+    return () => unregisterIframe(nodeId);
+  }, [nodeId]);
 
   useEffect(() => {
     if (isLive && iframeReady && iframeRef.current && data.pinnedState) {
@@ -84,6 +90,14 @@ function ScreenNode({ data }: NodeProps<ScreenNodeType>) {
     return () => window.removeEventListener('message', handler);
   }, [isLive, iframeScale]);
 
+  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    data.onDoubleClick?.(nodeId);
+  }, [data, nodeId]);
+
+  // Show "double-click to zoom" hint when selected but zoomed out
+  const showZoomHint = data.isActive && zoomLevel < 0.6;
+
   const showLiveIframe = isLive;
   const showScreenshot = !isLive && data.screenshotUrl && zoomLevel >= 0.5;
   const showPlaceholder = !showLiveIframe && !showScreenshot;
@@ -93,8 +107,9 @@ function ScreenNode({ data }: NodeProps<ScreenNodeType>) {
       className={`fc-node ${data.isActive ? 'is-active' : ''} ${isLive ? 'is-live' : ''}`}
       style={{ width: nodeWidth }}
       onClick={handleGoLive}
+      onDoubleClick={handleDoubleClick}
     >
-      {/* Floating label — Figma-style: route on left, component on right */}
+      {/* Floating label */}
       <div className={`fc-node-label drag-handle ${hideLabel ? 'is-hidden' : ''}`}>
         <span className={`fc-node-name ${data.isActive ? 'selected' : ''}`}>
           {data.hasPinnedState && <span className="fc-pin-dot" />}
@@ -106,7 +121,7 @@ function ScreenNode({ data }: NodeProps<ScreenNodeType>) {
         </span>
       </div>
 
-      {/* Screen content — flat, no header bar */}
+      {/* Screen content */}
       <div className="fc-node-screen" style={{ width: nodeWidth, height: containerHeight }}>
         {showLiveIframe && (
           <>
@@ -126,16 +141,8 @@ function ScreenNode({ data }: NodeProps<ScreenNodeType>) {
               }}
               title={data.componentName}
             />
-            {/* Click overlay — only shown when not selected, so first click selects, then iframe is interactive */}
             {!data.isActive && (
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  zIndex: 1,
-                  cursor: 'pointer',
-                }}
-              />
+              <div style={{ position: 'absolute', inset: 0, zIndex: 1, cursor: 'pointer' }} />
             )}
           </>
         )}
@@ -144,12 +151,7 @@ function ScreenNode({ data }: NodeProps<ScreenNodeType>) {
           <img
             src={data.screenshotUrl}
             alt={data.routePath}
-            style={{
-              width: nodeWidth,
-              height: containerHeight,
-              objectFit: 'cover',
-              objectPosition: 'top left',
-            }}
+            style={{ width: nodeWidth, height: containerHeight, objectFit: 'cover', objectPosition: 'top left' }}
           />
         )}
 
@@ -166,29 +168,11 @@ function ScreenNode({ data }: NodeProps<ScreenNodeType>) {
         )}
       </div>
 
-      {/* DevTools toggle + panel */}
-      {isLive && iframeReady && devToolsState && (
-        <>
-          <div className="fc-dt-toggle" onClick={() => setDevToolsOpen(!devToolsOpen)} style={{ width: nodeWidth }}>
-            <span className="fc-dt-toggle-label">
-              DevTools
-              {errorCount > 0 && <span className="fc-dt-badge fc-dt-badge-error">{errorCount}</span>}
-            </span>
-            <span className={`fc-dt-toggle-arrow ${devToolsOpen ? 'is-open' : ''}`}>▾</span>
-          </div>
-          {devToolsOpen && (
-            <div style={{ width: nodeWidth }}>
-              <DevToolsPanel
-                state={devToolsState}
-                nodeId={data.nodeId ?? ''}
-                onClearConsole={data.onClearConsole ?? (() => {})}
-                onClearNetwork={data.onClearNetwork ?? (() => {})}
-                onRequestStorage={data.onRequestStorage ?? (() => {})}
-                iframeRef={iframeRef}
-              />
-            </div>
-          )}
-        </>
+      {/* Zoom hint overlay */}
+      {showZoomHint && (
+        <div className="fc-node-zoom-hint">
+          <span>Double-click to zoom in</span>
+        </div>
       )}
 
       <Handle type="target" position={Position.Left} className="fc-handle" />

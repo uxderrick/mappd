@@ -7,6 +7,7 @@ import {
   BackgroundVariant,
   MarkerType,
   useViewport,
+  useReactFlow,
   ReactFlowProvider,
   type NodeTypes,
   type Node,
@@ -15,10 +16,11 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import ScreenNode from './components/ScreenNode';
-// PinPanel merged into ControlPanel
+import ScreenListPanel from './components/ScreenListPanel';
 import ControlPanel, { VIEWPORT_PRESETS, type ViewportPreset, type RouteInfo, type CanvasTheme, type EdgeStyle } from './components/ControlPanel';
 import { layoutGraph, type LayoutDirection } from './lib/layoutGraph';
 import StatusBar from './components/StatusBar';
+import { getIframe } from './lib/iframeRegistry';
 import { useCanvasNavigation } from './hooks/useCanvasNavigation';
 import { useIframeQueue } from './hooks/useIframeQueue';
 import { usePinnedState } from './hooks/usePinnedState';
@@ -48,6 +50,18 @@ interface FlowGraphJSON {
     triggerType: 'link' | 'programmatic' | 'state';
     triggerLabel: string;
     sourceCodeLocation: { file: string; line: number; column: number };
+  }[];
+  stateScreens?: {
+    parentRoutePath: string;
+    parentComponentFile: string;
+    name: string;
+    hookType: 'useState' | 'useReducer' | 'xstate' | 'zustand';
+    hookIndex: number;
+    stateValue: string | number | boolean;
+    componentName: string;
+    confidence: 'high' | 'medium' | 'low';
+    sourceLine: number;
+    sourceColumn: number;
   }[];
   metadata: {
     projectName: string;
@@ -94,33 +108,66 @@ function adaptGraph(graph: FlowGraphJSON): {
     markerEnd: { type: MarkerType.ArrowClosed },
   }));
 
-  return { baseNodes, edges };
+  return { baseNodes, edges, stateScreens: graph.stateScreens ?? [] };
+}
+
+export interface StateScreenInfo {
+  parentRoutePath: string;
+  name: string;
+  hookType: string;
+  hookIndex: number;
+  stateValue: string | number | boolean;
+  componentName: string;
+  confidence: string;
 }
 
 function AppInner() {
-  // Prevent native browser zoom — Figma does the same
+  // Prevent ALL native browser zoom — Figma does the same
   useEffect(() => {
+    // Pinch-to-zoom fires as wheel with ctrlKey
     const preventWheel = (e: WheelEvent) => {
       if (e.ctrlKey || e.metaKey) e.preventDefault();
     };
+    // macOS trackpad gesture events
     const preventGesture = (e: Event) => {
       e.preventDefault();
     };
+    // Cmd/Ctrl +/-/0 keyboard zoom
+    const preventKeyZoom = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+' || e.key === '-' || e.key === '0')) {
+        e.preventDefault();
+      }
+    };
+
     document.addEventListener('wheel', preventWheel, { passive: false });
     document.addEventListener('gesturestart', preventGesture, { passive: false } as any);
     document.addEventListener('gesturechange', preventGesture, { passive: false } as any);
     document.addEventListener('gestureend', preventGesture, { passive: false } as any);
+    document.addEventListener('keydown', preventKeyZoom);
+
+    // Set viewport meta to prevent mobile/touch zoom
+    let meta = document.querySelector('meta[name="viewport"]') as HTMLMetaElement | null;
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'viewport';
+      document.head.appendChild(meta);
+    }
+    meta.content = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no';
+
     return () => {
       document.removeEventListener('wheel', preventWheel);
       document.removeEventListener('gesturestart', preventGesture);
       document.removeEventListener('gesturechange', preventGesture);
       document.removeEventListener('gestureend', preventGesture);
+      document.removeEventListener('keydown', preventKeyZoom);
     };
   }, []);
 
+  const activeIframeRef = useRef<HTMLIFrameElement | null>(null);
+
   const [config, setConfig] = useState<{ targetPort: number; wsPort: number } | null>(null);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
-  const [graphData, setGraphData] = useState<{ baseNodes: Node<BaseNodeData>[]; edges: Edge[] } | null>(null);
+  const [graphData, setGraphData] = useState<{ baseNodes: Node<BaseNodeData>[]; edges: Edge[]; stateScreens: StateScreenInfo[] } | null>(null);
   const [screenshots, setScreenshots] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [viewportPreset, setViewportPreset] = useState<ViewportPreset>('desktop');
@@ -133,6 +180,7 @@ function AppInner() {
   const [reloadKeys, setReloadKeys] = useState<Record<string, number>>({});
 
   const { zoom } = useViewport();
+  const { fitView } = useReactFlow();
   const { requestLoad, onLoaded, shouldLoad } = useIframeQueue();
   const { globalAuth, setAuth, setPinForNode, clearPinForNode, getPinForNode, hasPinForNode } = usePinnedState();
 
@@ -215,6 +263,10 @@ function AppInner() {
     [onLoaded]
   );
 
+  const handleDoubleClickNode = useCallback((nodeId: string) => {
+    fitView({ nodes: [{ id: nodeId }], duration: 600, padding: 0.3, maxZoom: 1.5 });
+  }, [fitView]);
+
   // v1.1 handlers
   const handleToggleEdges = useCallback(() => setShowEdges((v) => !v), []);
   const handleToggleLabels = useCallback(() => setShowLabels((v) => !v), []);
@@ -228,10 +280,12 @@ function AppInner() {
   useEffect(() => {
     if (prevViewportRef.current === viewportPreset) return;
     prevViewportRef.current = viewportPreset;
-    if (!graphData) return;
-    const relaid = layoutGraph(graphData.baseNodes, graphData.edges, layoutDirection, nodeHeight);
-    setGraphData((prev) => prev ? { ...prev, baseNodes: relaid } : prev);
-  }, [viewportPreset, graphData, layoutDirection, nodeHeight]);
+    setGraphData((prev) => {
+      if (!prev) return prev;
+      const relaid = layoutGraph(prev.baseNodes, prev.edges, layoutDirection, nodeHeight);
+      return { ...prev, baseNodes: relaid };
+    });
+  }, [viewportPreset, layoutDirection, nodeHeight]);
 
   const handleReLayout = useCallback(() => {
     if (!graphData) return;
@@ -291,6 +345,7 @@ function AppInner() {
             forceLive: liveOverrides[node.id],
             reloadKey: reloadKeys[node.id] ?? 0,
             hideLabel: !showLabels,
+            onDoubleClick: handleDoubleClickNode,
             onRequestLoad: handleRequestLoad,
             onIframeLoaded: handleIframeLoaded,
             devToolsState: getStateForNode(node.id),
@@ -300,7 +355,7 @@ function AppInner() {
           },
         };
       }),
-    [activeNodeId, baseNodes, screenshots, zoom, devServerUrl, shouldLoad, getPinForNode, hasPinForNode, handleRequestLoad, handleIframeLoaded, vpDims, getStateForNode, clearConsole, clearNetwork, requestStorage, liveOverrides, reloadKeys, showLabels]
+    [activeNodeId, baseNodes, screenshots, zoom, devServerUrl, shouldLoad, getPinForNode, hasPinForNode, handleRequestLoad, handleIframeLoaded, handleDoubleClickNode, vpDims, getStateForNode, clearConsole, clearNetwork, requestStorage, liveOverrides, reloadKeys, showLabels]
   );
 
   const edges = useMemo(
@@ -375,43 +430,55 @@ function AppInner() {
     );
   }
 
-  return (
-    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        onNodeClick={handleNodeClick}
-        onPaneClick={handlePaneClick}
-        fitView
-        panOnScroll
-        panOnScrollSpeed={1.5}
-        zoomOnScroll={false}
-        zoomOnPinch={true}
-        zoomOnDoubleClick={false}
-        proOptions={{ hideAttribution: true }}
-        minZoom={0.1}
-        maxZoom={4}
-        className={canvasTheme === 'light' ? 'fc-theme-light' : ''}
-      >
-        <MiniMap
-          nodeColor="#a78bfa"
-          maskColor={canvasTheme === 'light' ? 'rgba(245,245,245,0.75)' : 'rgba(9, 9, 11, 0.75)'}
-          style={{ backgroundColor: canvasTheme === 'light' ? '#e5e5e5' : '#141416' }}
-        />
-        <Controls />
-        <Background
-          variant={BackgroundVariant.Dots}
-          color={canvasTheme === 'light' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.06)'}
-          gap={24}
-        />
-      </ReactFlow>
+  // Update active iframe ref from registry
+  activeIframeRef.current = activeNodeId ? getIframe(activeNodeId) : null;
 
-      {/* Control Panel — right sidebar */}
+  return (
+    <div className="fc-layout">
+      {/* Left panel — screen list */}
+      <ScreenListPanel
+        screens={routeInfoList}
+        activeNodeId={activeNodeId}
+        onSelect={setActiveNodeId}
+      />
+
+      {/* Center — canvas */}
+      <div className="fc-layout-canvas">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          onNodeClick={handleNodeClick}
+          onPaneClick={handlePaneClick}
+          fitView
+          panOnScroll
+          panOnScrollSpeed={1.5}
+          zoomOnScroll={false}
+          zoomOnPinch={true}
+          zoomOnDoubleClick={false}
+          proOptions={{ hideAttribution: true }}
+          minZoom={0.1}
+          maxZoom={4}
+          className={canvasTheme === 'light' ? 'fc-theme-light' : ''}
+        >
+          <MiniMap
+            nodeColor="#a78bfa"
+            maskColor={canvasTheme === 'light' ? 'rgba(245,245,245,0.75)' : 'rgba(9, 9, 11, 0.75)'}
+            style={{ backgroundColor: canvasTheme === 'light' ? '#e5e5e5' : '#141416' }}
+          />
+          <Controls />
+          <Background
+            variant={BackgroundVariant.Dots}
+            color={canvasTheme === 'light' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.06)'}
+            gap={24}
+          />
+        </ReactFlow>
+      </div>
+
+      {/* Right panel — controls + node properties */}
       <ControlPanel
         routes={routeInfoList}
         activeNodeId={activeNodeId}
-        onSelectNode={setActiveNodeId}
         devServerUrl={devServerUrl}
         onViewportChange={setViewportPreset}
         currentViewport={viewportPreset}
@@ -434,9 +501,30 @@ function AppInner() {
         onUpdatePin={setPinForNode}
         onClearPin={clearPinForNode}
         onUpdateAuth={setAuth}
+        devToolsState={activeNodeId ? getStateForNode(activeNodeId) : undefined}
+        onClearConsole={clearConsole}
+        onClearNetwork={clearNetwork}
+        onRequestStorage={requestStorage}
+        activeIframeRef={activeIframeRef}
+        stateScreens={activeNodeId ? (graphData?.stateScreens ?? []).filter(
+          s => {
+            // Match state screens to the active node's route
+            const activeNode = baseNodes.find(n => n.id === activeNodeId);
+            return activeNode && s.parentRoutePath === activeNode.data.routePath;
+          }
+        ) : []}
+        onOverrideState={(hookIndex, value) => {
+          if (activeIframeRef.current) {
+            activeIframeRef.current.contentWindow?.postMessage({
+              type: 'fc-override-state',
+              hookIndex,
+              value,
+            }, '*');
+          }
+        }}
       />
 
-      {/* Status Bar — bottom */}
+      {/* Status bar — bottom */}
       <StatusBar
         screenCount={baseNodes.length}
         connectionCount={baseEdges.length}

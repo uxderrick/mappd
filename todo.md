@@ -58,18 +58,42 @@ Priorities: `P0` (critical/blocking), `P1` (important), `P2` (nice-to-have), `P3
 - [x] **Keyboard shortcuts help** — `?` icon opens shortcut reference `[P2]` `[done: 2026-03-27]`
 
 ### Layout Restructure (explore)
-- [ ] **Figma-style 3-panel layout** — Left panel = screen list, Canvas = middle, Right panel = selected node actions `[P1]` `[added: 2026-03-27]`
+- [x] **Figma-style 3-panel layout** — Left panel = screen list, Canvas = middle, Right panel = selected node actions `[P1]` `[done: 2026-03-27]`
   - **Left panel:** Full screen list (replaces dropdown), click to zoom to node. Always visible, scrollable
   - **Right panel:** Everything about the selected node — DevTools tabs, Pin State, Open in editor, Viewport, Reload. Consolidates PinPanel + DevToolsPanel + node actions into one panel
   - **Canvas:** Takes up the middle, no more per-node DevTools (removes clutter, keeps node height consistent)
-  - **Why this is better:**
-    1. DevTools below each node clutters canvas and changes node height (breaks layout)
-    2. Fixed right panel is always the same size — readable at any zoom level
-    3. All node actions in one place instead of scattered across node UI and floating panels
-    4. Matches Figma's model exactly — left = layers list, right = properties of selected
+
+### Panel Design Polish (Figma-inspired)
+- [ ] **Figma-style panel hierarchy and spacing** — Redesign both panels to match Figma's information hierarchy `[P1]` `[added: 2026-03-27]`
+  - **Key patterns from Figma's right panel:**
+    1. **Selected element name as header** — bold, large, with type icon + overflow menu (···). Not a section, it IS the panel identity
+    2. **Section titles are single words** — "Position", "Auto layout", "Fill", "Stroke", "Effects". No sentence-case descriptions
+    3. **Sections use + buttons** for additive actions (add fill, add effect) instead of toggles
+    4. **Dense but breathable** — tight vertical spacing (4-6px between rows) but clear horizontal separation between label and value
+    5. **Inline editable fields** — values are directly editable in-place, not hidden behind modals or dropdowns
+    6. **Consistent field layout** — label left, value right, always the same width ratio
+    7. **Collapsible sections** — sections like "Auto layout" expand/collapse with a subtle triangle, no border around them
+    8. **Muted hierarchy** — section titles are slightly bolder than field labels, but both are subdued. Only the selected element name is prominent
+    9. **No buttons for navigation** — actions are icon-only (grid icon, eye icon, settings icon) aligned right of section titles
+    10. **Bottom sections are single-line** — "Stroke", "Effects", "Export" show as collapsed one-liners with a + button, expanding only when content exists
+  - **Apply to Mappd:**
+    - Left panel: match Figma's Layers panel — compact rows, indent for hierarchy, type icons per route
+    - Right panel: selected route as header, sections = Actions | Pin State | DevTools | Canvas. Each section title = single word, collapsible, icon-only action buttons
+
+### Demo Apps (per-framework test fixtures)
+- [ ] **demo-react-router-v6** — Current demo-app, already built (React Router v6, Vite, 10 routes, state patterns) `[P1]` `[added: 2026-03-27]`
+- [ ] **demo-react-router-v7** — React Router v7 framework mode with `routes.ts`, flat-routes, loaders/actions `[P1]` `[added: 2026-03-27]`
+- [ ] **demo-nextjs-app** — Next.js App Router with route groups, dynamic routes, layouts, middleware `[P1]` `[added: 2026-03-27]`
+- [ ] **demo-nextjs-pages** — Next.js Pages Router with `getServerSideProps` redirects, dynamic routes `[P2]` `[added: 2026-03-27]`
+- [ ] **demo-vue** — Vue Router with `createRouter`, `<router-link>`, guards (when Vue parser is built) `[P2]` `[added: 2026-03-27]`
+- [ ] **demo-nuxt** — Nuxt with `pages/` directory, `navigateTo()`, middleware (when Nuxt parser is built) `[P2]` `[added: 2026-03-27]`
+- [ ] **demo-angular** — Angular Router with lazy routes (when Angular parser is built) `[P3]` `[added: 2026-03-27]`
+- [ ] **demo-sveltekit** — SvelteKit with `+page.svelte`, `goto()` (when Svelte parser is built) `[P3]` `[added: 2026-03-27]`
 
 ### Bugs / Polish
 - [x] **Auto re-layout on viewport change** — Changing viewport (Desktop→Mobile) changes node height, causing nodes to overlap. Auto re-runs dagre layout when viewport preset changes `[P1]` `[done: 2026-03-27]`
+- [ ] **Investigate DevTools section** — Verify DevTools (Console/Network/Storage) works in right panel after moving from per-node. Test: does the iframe registry return the right ref? Does postMessage still flow? Are console entries attributed to the correct node? `[P1]` `[added: 2026-03-27]`
+- [ ] **Panel breathing room** — Panels are too compact. Investigate spacing improvements: increase section padding (6px→10px), add more gap between rows (4px→6px), slightly larger font sizes for labels, more margin between sections. Compare to Figma's spacing. Goal: readable without squinting, but still information-dense `[P1]` `[added: 2026-03-27]`
 
 ### Phase 2+ Backlog
 - [ ] **Per-node DevTools panel** — Console, Network, Application tabs per screen node `[P1]` `[added: 2026-03-23]`

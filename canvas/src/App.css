@@ -57,6 +57,113 @@ html, body, #root {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* --- 3-Panel Layout --- */
+.fc-layout {
+  display: grid;
+  grid-template-columns: 180px 1fr 220px;
+  grid-template-rows: 1fr 28px;
+  width: 100%;
+  height: 100%;
+}
+
+.fc-layout-canvas {
+  grid-row: 1;
+  grid-column: 2;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ============================================
+   Screen List — Left Panel
+   ============================================ */
+
+.fc-screen-list {
+  grid-row: 1;
+  grid-column: 1;
+  background: var(--fc-bg-surface);
+  border-right: 1px solid var(--fc-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: var(--fc-font-sans);
+  font-size: 11px;
+  touch-action: pan-y;
+}
+
+.fc-sl-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--fc-border);
+}
+
+.fc-sl-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fc-text-muted);
+}
+
+.fc-sl-count {
+  font-family: var(--fc-font);
+  font-size: 9px;
+  color: var(--fc-text-ghost);
+  background: var(--fc-bg-void);
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--fc-border);
+}
+
+.fc-sl-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.fc-sl-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--fc-transition);
+  border-left: 2px solid transparent;
+}
+
+.fc-sl-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.fc-sl-item.is-active {
+  background: var(--fc-accent-glow);
+  border-left-color: var(--fc-accent);
+}
+
+.fc-sl-route {
+  font-family: var(--fc-font);
+  font-size: 11px;
+  color: var(--fc-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fc-sl-item.is-active .fc-sl-route {
+  color: var(--fc-accent);
+}
+
+.fc-sl-component {
+  font-family: var(--fc-font);
+  font-size: 9px;
+  color: var(--fc-text-ghost);
+}
+
 /* --- Canvas --- */
 .react-flow {
   background: var(--fc-bg-canvas);
@@ -207,6 +314,24 @@ html, body, #root {
 /* React Flow selection: dashed accent */
 .react-flow__node.selected .fc-node-screen {
   border: 1.5px dashed var(--fc-accent);
+}
+
+/* Zoom hint overlay */
+.fc-node-zoom-hint {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: var(--fc-text-secondary);
+  font-family: var(--fc-font-sans);
+  font-size: 9px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.8;
 }
 
 /* Placeholder */
@@ -474,7 +599,7 @@ html, body, #root {
 
 .pin-input {
   width: 100%;
-  padding: 5px 7px;
+  padding: 6px 8px;
   background: var(--fc-bg-void);
   border: 1px solid var(--fc-border);
   border-radius: var(--fc-radius);
@@ -482,7 +607,7 @@ html, body, #root {
   font-family: var(--fc-font);
   font-size: 11px;
   box-sizing: border-box;
-  height: 26px;
+  height: 28px;
   transition: border-color var(--fc-transition);
 }
 
@@ -577,14 +702,10 @@ html, body, #root {
    ============================================ */
 
 .fc-control-panel {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 220px;
-  height: calc(100% - 28px);
+  grid-row: 1;
+  grid-column: 3;
   background: var(--fc-bg-surface);
   color: var(--fc-text-primary);
-  z-index: 50;
   display: flex;
   flex-direction: column;
   border-left: 1px solid var(--fc-border);
@@ -597,9 +718,67 @@ html, body, #root {
 .fc-cp-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 8px 10px;
+  align-items: flex-start;
+  padding: 12px 12px 10px;
   border-bottom: 1px solid var(--fc-border);
+  min-height: 40px;
+}
+
+.fc-cp-header-selected {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.fc-cp-header-name {
+  font-family: var(--fc-font);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fc-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fc-cp-header-sub {
+  font-family: var(--fc-font);
+  font-size: 10px;
+  color: var(--fc-text-ghost);
+}
+
+/* Icon action bar — horizontal row of icon-only buttons */
+.fc-cp-icon-bar {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.fc-cp-icon-btn {
+  background: none;
+  border: none;
+  color: var(--fc-text-ghost);
+  cursor: pointer;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--fc-radius);
+  transition: all var(--fc-transition);
+  padding: 0;
+}
+
+.fc-cp-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--fc-text-primary);
+}
+
+.fc-cp-icon-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 .fc-cp-title {
@@ -631,11 +810,11 @@ html, body, #root {
 .fc-cp-body {
   flex: 1;
   overflow-y: auto;
-  padding: 6px 0;
+  padding: 4px 0;
 }
 
 .fc-cp-section {
-  padding: 6px 10px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--fc-border);
 }
 
@@ -644,12 +823,12 @@ html, body, #root {
 }
 
 .fc-cp-section-title {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   color: var(--fc-text-ghost);
-  margin: 0 0 6px 0;
+  margin: 0 0 8px 0;
   display: flex;
   align-items: center;
 }
@@ -679,11 +858,68 @@ html, body, #root {
   color: var(--fc-text-ghost);
 }
 
+/* DevTools in right panel */
+.fc-cp-section-devtools {
+  padding: 6px 0 0 0;
+}
+
+.fc-cp-section-devtools .fc-cp-section-title {
+  padding: 0 10px 6px;
+}
+
+.fc-cp-section-devtools .fc-dt {
+  border-top: 1px solid var(--fc-border);
+}
+
 .fc-cp-pin-fields {
   margin-top: 6px;
 }
 
-/* Canvas settings disclosure toggle */
+/* Collapsible section toggle */
+.fc-cp-section-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  margin-bottom: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  gap: 4px;
+}
+
+.fc-cp-section-toggle:hover .fc-cp-section-title {
+  color: var(--fc-text-muted);
+}
+
+.fc-cp-collapse-arrow {
+  font-size: 9px;
+  color: var(--fc-text-ghost);
+  transition: transform var(--fc-transition);
+  flex-shrink: 0;
+}
+
+.fc-cp-collapse-arrow.is-open {
+  transform: rotate(0deg);
+}
+
+.fc-cp-collapse-arrow:not(.is-open) {
+  transform: rotate(-90deg);
+}
+
+.fc-cp-collapse-arrow-label {
+  font-family: var(--fc-font);
+  font-size: 9px;
+  color: var(--fc-text-ghost);
+  margin-left: auto;
+  margin-right: 4px;
+}
+
+.fc-cp-section-body {
+  /* Content below the toggle */
+}
+
+/* Canvas settings disclosure toggle (legacy) */
 .fc-cp-canvas-toggle {
   width: 100%;
   display: flex;
@@ -850,13 +1086,13 @@ html, body, #root {
 /* ── Buttons ── */
 
 .fc-cp-btn {
-  padding: 4px 8px;
+  padding: 5px 10px;
   background: var(--fc-bg-void);
   border: 1px solid var(--fc-border);
   border-radius: var(--fc-radius);
   color: var(--fc-text-secondary);
   font-family: var(--fc-font-sans);
-  font-size: 10px;
+  font-size: 11px;
   cursor: pointer;
   transition: all var(--fc-transition);
   display: inline-flex;
@@ -892,7 +1128,7 @@ html, body, #root {
   width: 100%;
   justify-content: flex-start;
   gap: 6px;
-  padding: 6px 8px;
+  padding: 7px 10px;
 }
 
 /* ── Viewport Size Toggle ── */
@@ -952,7 +1188,7 @@ html, body, #root {
 .fc-cp-actions {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
 
 /* ── Display toggles ── */
@@ -960,7 +1196,7 @@ html, body, #root {
 .fc-cp-display-grid {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .fc-cp-toggle-row {
@@ -971,7 +1207,7 @@ html, body, #root {
 
 .fc-cp-toggle-label {
   font-family: var(--fc-font-sans);
-  font-size: 10px;
+  font-size: 11px;
   color: var(--fc-text-secondary);
 }
 
@@ -1084,14 +1320,11 @@ html, body, #root {
    ============================================ */
 
 .fc-status-bar {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  grid-row: 2;
+  grid-column: 1 / -1;
   height: 28px;
   background: var(--fc-bg-surface);
   border-top: 1px solid var(--fc-border);
-  z-index: 50;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1536,3 +1769,51 @@ html, body, #root {
 .fc-dt-toggle-arrow.is-open {
   transform: rotate(180deg);
 }
+
+/* ============================================
+   State Screens — clickable state variants
+   ============================================ */
+
+.fc-cp-states-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fc-cp-state-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 5px 8px;
+  background: var(--fc-bg-void);
+  border: 1px solid var(--fc-border);
+  border-radius: var(--fc-radius);
+  cursor: pointer;
+  transition: all var(--fc-transition);
+  text-align: left;
+}
+
+.fc-cp-state-btn:hover {
+  background: var(--fc-bg-elevated);
+  border-color: var(--fc-accent);
+}
+
+.fc-cp-state-btn:active {
+  background: var(--fc-accent-dim);
+}
+
+.fc-cp-state-name {
+  font-family: var(--fc-font);
+  font-size: 11px;
+  color: var(--fc-text-primary);
+}
+
+.fc-cp-state-confidence {
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.fc-cp-confidence-high { color: var(--fc-live); }
+.fc-cp-confidence-medium { color: var(--fc-pin); }
+.fc-cp-confidence-low { color: var(--fc-text-ghost); }
