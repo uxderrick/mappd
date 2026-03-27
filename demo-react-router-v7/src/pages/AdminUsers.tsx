@@ -42,6 +42,9 @@ export default function AdminUsers() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedUser, setSelectedUser] = useState<number | null>(null)
+  const [editingUser, setEditingUser] = useState<number | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editEmail, setEditEmail] = useState('')
 
   useEffect(() => {
     fetch('https://jsonplaceholder.typicode.com/users')
@@ -127,7 +130,17 @@ export default function AdminUsers() {
                 </span>
               </span>
               <span>
-                <button className="btn btn-secondary" style={{ padding: '4px 12px', fontSize: 12 }}>
+                <button
+                  className="btn btn-secondary"
+                  style={{ padding: '4px 12px', fontSize: 12 }}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setEditingUser(user.id)
+                    setEditName(user.name)
+                    setEditEmail(user.email)
+                    console.log('Editing user:', user.name)
+                  }}
+                >
                   Edit
                 </button>
               </span>
@@ -138,6 +151,62 @@ export default function AdminUsers() {
               No users match your filters.
             </div>
           )}
+        </div>
+      )}
+      {/* Edit User Modal */}
+      {editingUser !== null && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
+          onClick={() => setEditingUser(null)}
+        >
+          <div
+            className="card"
+            style={{ width: 400, padding: 24 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ marginTop: 0, marginBottom: 16 }}>Edit User</h3>
+            <div className="form-group">
+              <label>Name</label>
+              <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Email</label>
+              <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Status</label>
+              <select
+                value={statusMap[editingUser]}
+                onChange={(e) => {
+                  console.log(`Status changed to ${e.target.value} for user ${editingUser}`)
+                }}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 14 }}
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button
+                className="btn btn-secondary"
+                style={{ flex: 1 }}
+                onClick={() => setEditingUser(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+                onClick={() => {
+                  console.log('Saved user:', { id: editingUser, name: editName, email: editEmail })
+                  setUsers(prev => prev.map(u => u.id === editingUser ? { ...u, name: editName, email: editEmail } : u))
+                  setEditingUser(null)
+                }}
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
