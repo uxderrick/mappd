@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -22,7 +22,34 @@ function DashboardHome() {
   const [quickName, setQuickName] = useState('');
   const [quickDesc, setQuickDesc] = useState('');
 
+  // --- DevTools test: localStorage, console, and fetch ---
+  useEffect(() => {
+    // Console logs (will appear in DevTools Console tab)
+    console.log('Dashboard mounted at', new Date().toLocaleTimeString());
+    console.info('Loading team members...');
+    console.warn('API rate limit: 95% used');
+
+    // localStorage writes (will appear in DevTools Storage tab)
+    localStorage.setItem('mappd-demo:lastVisited', '/dashboard');
+    localStorage.setItem('mappd-demo:visitCount', String(Number(localStorage.getItem('mappd-demo:visitCount') || '0') + 1));
+    localStorage.setItem('mappd-demo:theme', 'dark');
+    sessionStorage.setItem('mappd-demo:sessionId', 'sess_' + Math.random().toString(36).slice(2, 8));
+
+    // Fetch calls (will appear in DevTools Network tab)
+    fetch('https://jsonplaceholder.typicode.com/users?_limit=3')
+      .then(res => res.json())
+      .then(data => console.log('Fetched users:', data.length))
+      .catch(err => console.error('Failed to fetch users:', err.message));
+
+    fetch('https://jsonplaceholder.typicode.com/posts?_limit=5')
+      .then(res => res.json())
+      .then(data => console.log('Fetched posts:', data.length))
+      .catch(err => console.error('Failed to fetch posts:', err.message));
+  }, []);
+
   const handleQuickAdd = () => {
+    console.log('Creating project:', quickName);
+    localStorage.setItem('mappd-demo:lastProject', quickName);
     alert(`Project created: ${quickName}`);
     setQuickName('');
     setQuickDesc('');

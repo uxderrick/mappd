@@ -868,6 +868,7 @@ html, body, #root {
 /* DevTools in right panel */
 .fc-cp-section-devtools {
   padding: 6px 0 0 0;
+  overflow: hidden;
 }
 
 .fc-cp-section-devtools .fc-cp-section-title {
@@ -1507,6 +1508,8 @@ html, body, #root {
   max-height: 200px;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  max-width: 100%;
 }
 
 .fc-dt-tabs {
@@ -1516,6 +1519,7 @@ html, body, #root {
   padding: 0 4px;
   min-height: 24px;
   flex-shrink: 0;
+  overflow-x: hidden;
 }
 
 .fc-dt-tab {
@@ -1527,13 +1531,15 @@ html, body, #root {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding: 4px 8px;
+  padding: 4px 6px;
   cursor: pointer;
   border-bottom: 1.5px solid transparent;
   transition: all var(--fc-transition);
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .fc-dt-tab:hover {
@@ -1554,10 +1560,11 @@ html, body, #root {
   border: none;
   color: var(--fc-text-ghost);
   cursor: pointer;
-  font-size: 10px;
+  font-size: 9px;
   padding: 2px 4px;
   border-radius: var(--fc-radius);
   transition: all var(--fc-transition);
+  flex-shrink: 0;
 }
 
 .fc-dt-clear:hover {
@@ -1599,10 +1606,11 @@ html, body, #root {
 
 .fc-dt-console-row {
   display: flex;
-  gap: 8px;
-  padding: 1px 8px;
+  gap: 6px;
+  padding: 1px 6px;
   line-height: 1.5;
   border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  overflow: hidden;
 }
 
 .fc-dt-console-row:hover {
@@ -1618,6 +1626,8 @@ html, body, #root {
 .fc-dt-console-msg {
   word-break: break-all;
   white-space: pre-wrap;
+  overflow: hidden;
+  max-width: 100%;
 }
 
 .fc-dt-level-log .fc-dt-console-msg { color: var(--fc-text-secondary); }
@@ -1634,12 +1644,13 @@ html, body, #root {
 
 .fc-dt-network-summary {
   display: flex;
-  gap: 6px;
-  padding: 3px 8px;
+  gap: 4px;
+  padding: 3px 6px;
   cursor: pointer;
   align-items: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.02);
   transition: background var(--fc-transition);
+  overflow: hidden;
 }
 
 .fc-dt-network-summary:hover {

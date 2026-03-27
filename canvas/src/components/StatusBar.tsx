@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Monitor, ArrowsLeftRight, Question, X } from '@phosphor-icons/react';
 
 interface StatusBarProps {
   screenCount: number;
@@ -49,20 +50,12 @@ export default function StatusBar({
         {/* Left: Route count */}
         <div className="fc-sb-left">
           <span className="fc-sb-stat">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="2" y="3" width="20" height="14" rx="2" />
-              <line x1="8" y1="21" x2="16" y2="21" />
-              <line x1="12" y1="17" x2="12" y2="21" />
-            </svg>
+            <Monitor size={11} />
             {screenCount} screen{screenCount !== 1 ? 's' : ''}
           </span>
           <span className="fc-sb-divider" />
           <span className="fc-sb-stat">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-              <polyline points="15 3 21 3 21 9" />
-              <line x1="10" y1="14" x2="21" y2="3" />
-            </svg>
+            <ArrowsLeftRight size={11} />
             {connectionCount} connection{connectionCount !== 1 ? 's' : ''}
           </span>
         </div>
@@ -81,7 +74,7 @@ export default function StatusBar({
             onClick={toggleShortcuts}
             title="Keyboard shortcuts"
           >
-            ?
+            <Question size={12} weight="bold" />
           </button>
         </div>
       </div>
@@ -93,10 +86,7 @@ export default function StatusBar({
             <div className="fc-shortcuts-header">
               <span className="fc-shortcuts-title">Keyboard Shortcuts</span>
               <button className="fc-cp-close" onClick={toggleShortcuts}>
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
+                <X size={10} />
               </button>
             </div>
             <div className="fc-shortcuts-body">

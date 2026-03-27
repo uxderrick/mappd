@@ -92,10 +92,10 @@ Priorities: `P0` (critical/blocking), `P1` (important), `P2` (nice-to-have), `P3
 
 ### Bugs / Polish
 - [x] **Auto re-layout on viewport change** — Changing viewport (Desktop→Mobile) changes node height, causing nodes to overlap. Auto re-runs dagre layout when viewport preset changes `[P1]` `[done: 2026-03-27]`
-- [ ] **Investigate DevTools section** — Verify DevTools (Console/Network/Storage) works in right panel after moving from per-node. Test: does the iframe registry return the right ref? Does postMessage still flow? Are console entries attributed to the correct node? `[P1]` `[added: 2026-03-27]`
+- [x] **Investigate DevTools section** — Verify DevTools (Console/Network/Storage) works in right panel after moving from per-node. Test: does the iframe registry return the right ref? Does postMessage still flow? Are console entries attributed to the correct node? `[P1]` `[added: 2026-03-27]`
 - [x] **Panel breathing room** — Increased spacing across all panels (section padding, row gaps, font sizes, input heights). First pass done. `[P1]` `[done: 2026-03-27]`
 - [ ] **Iframe scroll handling** — When a node is selected and the user scrolls inside it, should the iframe content scroll or the canvas pan? Currently the overlay blocks scroll when not selected, and when selected pointer events pass through but scroll behavior is inconsistent. Need to decide: (1) scroll inside iframe when selected, (2) always pan canvas and never scroll iframe, or (3) hold a modifier key to switch between iframe scroll and canvas pan `[P1]` `[added: 2026-03-27]`
-- [ ] **Phosphor Icons** — Replace all inline SVG icons with `@phosphor-icons/react`. Consistent icon language, tree-shakeable, cleaner component code. Covers: left panel route icons, right panel action bar, section chevrons, status bar icons, node label indicators `[P2]` `[added: 2026-03-27]`
+- [x] **Phosphor Icons** — Replaced all inline SVG icons with `@phosphor-icons/react`. Covers: ControlPanel (ArrowClockwise, Play, Monitor, PencilSimple, ArrowSquareOut, CaretDown, Minus, Plus, ArrowsClockwise, Download, FilePdf), ScreenListPanel (Browser), StatusBar (Monitor, ArrowsLeftRight, Question, X) `[P2]` `[done: 2026-03-27]`
 
 ### Phase 2+ Backlog
 - [ ] **Per-node DevTools panel** — Console, Network, Application tabs per screen node `[P1]` `[added: 2026-03-23]`

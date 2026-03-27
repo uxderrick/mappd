@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useReactFlow } from '@xyflow/react';
+import { Browser } from '@phosphor-icons/react';
 
 interface ScreenItem {
   id: string;
@@ -42,10 +43,7 @@ export default function ScreenListPanel({
             onClick={() => handleClick(s.id)}
           >
             <div className="fc-sl-item-row">
-              <svg className="fc-sl-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" />
-                <line x1="9" y1="3" x2="9" y2="21" />
-              </svg>
+              <Browser size={12} className="fc-sl-icon" />
               <span className="fc-sl-route">{s.routePath}</span>
             </div>
             <span className="fc-sl-component">{s.componentName}</span>

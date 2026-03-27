@@ -12,6 +12,18 @@ type TabKey = (typeof TABS)[number]['key'];
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('general');
 
+  const handleTabChange = (tab: TabKey) => {
+    console.log(`Settings: switched to ${tab} tab`);
+    localStorage.setItem('mappd-demo:settingsTab', tab);
+    setActiveTab(tab);
+
+    // Simulate an API call when switching tabs
+    fetch(`https://jsonplaceholder.typicode.com/todos?_limit=3&tab=${tab}`)
+      .then(res => res.json())
+      .then(data => console.info(`Loaded ${data.length} items for ${tab} settings`))
+      .catch(err => console.error(`Settings fetch failed:`, err.message));
+  };
+
   // General tab state
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
@@ -45,7 +57,7 @@ export default function SettingsPage() {
           <button
             key={tab.key}
             type="button"
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => handleTabChange(tab.key)}
             style={{
               padding: '10px 20px',
               fontSize: 14,

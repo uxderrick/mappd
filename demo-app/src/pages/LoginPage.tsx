@@ -10,6 +10,19 @@ export default function LoginPage() {
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
+    console.log('Login attempt:', username);
+    localStorage.setItem('mappd-demo:user', username);
+    localStorage.setItem('mappd-demo:loginTime', new Date().toISOString());
+
+    // Simulate auth API call
+    fetch('https://jsonplaceholder.typicode.com/users/1')
+      .then(res => res.json())
+      .then(data => {
+        console.info('Auth response:', data.name);
+        localStorage.setItem('mappd-demo:token', 'jwt_' + Math.random().toString(36).slice(2, 10));
+      })
+      .catch(err => console.error('Auth failed:', err.message));
+
     setAuthUsername(username);
     navigate('/dashboard', { username });
   };
