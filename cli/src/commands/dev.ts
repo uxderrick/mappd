@@ -46,13 +46,14 @@ export async function devCommand(options: DevOptions) {
   }
   console.log('');
 
-  // Step 3: Start the canvas server
+  // Step 3: Inject mappd-inject.js into target project
   const canvasDir = path.resolve(import.meta.dirname, '../../canvas-dist');
   const flowGraphDir = path.join(projectDir, '.mappd');
+  const injection = injectScript(projectDir, canvasDir);
 
   const server = createServer({ port, flowGraphDir, canvasDir, targetPort });
 
-  // Step 4: Start file watcher
+  // Step 5: Start file watcher
   const watcher = startWatcher(projectDir, (changedFile) => {
     console.log(pc.dim(`  File changed: ${path.relative(projectDir, changedFile)}`));
     const updated = parseAndWriteGraph(projectDir);
@@ -92,8 +93,134 @@ export async function devCommand(options: DevOptions) {
     console.log(pc.dim('  Shutting down...'));
     watcher.close();
     server.close();
+    // Clean up injected files
+    if (injection) {
+      cleanupInjection(injection);
+    }
     process.exit(0);
   });
+}
+
+interface Injection {
+  scriptPath: string;        // path to copied mappd-inject.js
+  htmlPath: string | null;   // path to modified HTML/layout file
+  htmlBackup: string | null; // original content of the HTML file
+}
+
+/**
+ * Inject mappd-inject.js into the target project:
+ * 1. Copy the script to the project's public/ directory
+ * 2. Add a <script> tag to the HTML entry point so it loads automatically
+ *
+ * On shutdown, the script file is deleted and the HTML is restored.
+ */
+function injectScript(projectDir: string, canvasDir: string): Injection | null {
+  const scriptSrc = path.join(canvasDir, 'mappd-inject.js');
+  if (!fs.existsSync(scriptSrc)) return null;
+
+  // Step 1: Copy script to public/
+  const publicDirs = ['public', 'static', path.join('app', 'public'), path.join('src', 'public')];
+  let publicDir: string | null = null;
+
+  for (const dir of publicDirs) {
+    const fullDir = path.join(projectDir, dir);
+    if (fs.existsSync(fullDir) && fs.statSync(fullDir).isDirectory()) {
+      publicDir = fullDir;
+      break;
+    }
+  }
+
+  if (!publicDir) {
+    publicDir = path.join(projectDir, 'public');
+    fs.mkdirSync(publicDir, { recursive: true });
+  }
+
+  const scriptDst = path.join(publicDir, 'mappd-inject.js');
+  fs.copyFileSync(scriptSrc, scriptDst);
+
+  // Step 2: Add <script> tag to HTML entry point
+  const SCRIPT_TAG = '<script src="/mappd-inject.js"></script>';
+  const htmlCandidates = [
+    'index.html',                       // Vite, CRA
+    path.join('src', 'index.html'),     // some CRA setups
+  ];
+
+  for (const candidate of htmlCandidates) {
+    const htmlPath = path.join(projectDir, candidate);
+    if (!fs.existsSync(htmlPath)) continue;
+
+    const original = fs.readFileSync(htmlPath, 'utf-8');
+    if (original.includes('mappd-inject.js')) {
+      // Already injected (e.g., from a previous run that didn't clean up)
+      console.log(pc.dim(`  Script already in ${candidate}`));
+      return { scriptPath: scriptDst, htmlPath, htmlBackup: original };
+    }
+
+    // Inject before </head> — must load before app JS
+    let modified: string;
+    if (original.includes('</head>')) {
+      modified = original.replace('</head>', `  ${SCRIPT_TAG}\n  </head>`);
+    } else if (original.includes('<body>')) {
+      modified = original.replace('<body>', `<body>\n  ${SCRIPT_TAG}`);
+    } else {
+      modified = SCRIPT_TAG + '\n' + original;
+    }
+
+    fs.writeFileSync(htmlPath, modified, 'utf-8');
+    console.log(pc.dim(`  Injected script tag into ${candidate}`));
+    return { scriptPath: scriptDst, htmlPath, htmlBackup: original };
+  }
+
+  // Next.js: inject into app/layout.tsx or pages/_document.tsx
+  const nextCandidates = [
+    { file: path.join('app', 'layout.tsx'), tag: 'head' },
+    { file: path.join('app', 'layout.jsx'), tag: 'head' },
+    { file: path.join('app', 'layout.ts'), tag: 'head' },
+    { file: path.join('app', 'layout.js'), tag: 'head' },
+    { file: path.join('src', 'app', 'layout.tsx'), tag: 'head' },
+    { file: path.join('src', 'app', 'layout.jsx'), tag: 'head' },
+  ];
+
+  for (const { file, tag } of nextCandidates) {
+    const layoutPath = path.join(projectDir, file);
+    if (!fs.existsSync(layoutPath)) continue;
+
+    const original = fs.readFileSync(layoutPath, 'utf-8');
+    if (original.includes('mappd-inject.js')) {
+      console.log(pc.dim(`  Script already in ${file}`));
+      return { scriptPath: scriptDst, htmlPath: layoutPath, htmlBackup: original };
+    }
+
+    // Find <head> or <Head> and inject after it
+    let modified: string;
+    const headMatch = original.match(/<head[^>]*>/i);
+    if (headMatch) {
+      modified = original.replace(headMatch[0], `${headMatch[0]}\n        <script src="/mappd-inject.js"></script>`);
+    } else {
+      // No <head> tag found — skip this file
+      continue;
+    }
+
+    fs.writeFileSync(layoutPath, modified, 'utf-8');
+    console.log(pc.dim(`  Injected script tag into ${file}`));
+    return { scriptPath: scriptDst, htmlPath: layoutPath, htmlBackup: original };
+  }
+
+  console.log(pc.dim(`  Copied mappd-inject.js to public/ (add <script src="/mappd-inject.js"></script> to your HTML manually)`));
+  return { scriptPath: scriptDst, htmlPath: null, htmlBackup: null };
+}
+
+/**
+ * Clean up: remove the script file and restore the original HTML.
+ */
+function cleanupInjection(injection: Injection): void {
+  try { fs.unlinkSync(injection.scriptPath); } catch {}
+
+  if (injection.htmlPath && injection.htmlBackup) {
+    try {
+      fs.writeFileSync(injection.htmlPath, injection.htmlBackup, 'utf-8');
+    } catch {}
+  }
 }
 
 /**

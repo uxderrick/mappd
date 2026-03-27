@@ -46,19 +46,36 @@ function extractRoutesConfig(routesFile: string, projectDir: string): ParsedRout
 
   // Check if this routes.ts uses flatRoutes() — delegate to file-based strategy
   let usesFlatRoutes = false;
+  let flatRoutesRootDir: string | null = null;
   traverse(ast, {
     CallExpression(nodePath: any) {
       const callee = nodePath.node.callee;
       if (t.isIdentifier(callee) && callee.name === 'flatRoutes') {
         usesFlatRoutes = true;
+        // Check for rootDirectory option: flatRoutes({ rootDirectory: 'app/custom' })
+        const firstArg = nodePath.node.arguments[0];
+        if (t.isObjectExpression(firstArg)) {
+          for (const prop of firstArg.properties) {
+            if (
+              t.isObjectProperty(prop) &&
+              t.isIdentifier(prop.key) &&
+              prop.key.name === 'rootDirectory' &&
+              t.isStringLiteral(prop.value)
+            ) {
+              flatRoutesRootDir = prop.value.value;
+            }
+          }
+        }
         nodePath.stop();
       }
     },
   });
 
   if (usesFlatRoutes) {
-    // flatRoutes() means file-based routing — scan app/routes/ directory
-    const routesDir = path.join(projectDir, 'app', 'routes');
+    // flatRoutes() means file-based routing — scan the specified or default directory
+    const routesDir = flatRoutesRootDir
+      ? path.resolve(projectDir, flatRoutesRootDir)
+      : path.join(projectDir, 'app', 'routes');
     if (fs.existsSync(routesDir)) {
       return extractFlatRoutes(routesDir, projectDir);
     }

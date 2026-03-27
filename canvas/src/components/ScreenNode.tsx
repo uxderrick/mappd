@@ -32,6 +32,7 @@ function ScreenNode({ data }: NodeProps<ScreenNodeType>) {
   const handleIframeLoad = useCallback(() => {
     setIframeReady(true);
     data.onIframeLoaded?.(data.nodeId ?? '');
+
     if (iframeRef.current && data.pinnedState) {
       sendPinToIframe(iframeRef.current, data.pinnedState);
     }
@@ -83,14 +84,15 @@ function ScreenNode({ data }: NodeProps<ScreenNodeType>) {
       style={{ width: nodeWidth }}
       onDoubleClick={handleGoLive}
     >
-      {/* Floating label — above the node, Figma-style */}
+      {/* Floating label — Figma-style: route on left, component on right */}
       <div className="fc-node-label drag-handle">
         <span className={`fc-node-name ${data.isActive ? 'selected' : ''}`}>
           {data.hasPinnedState && <span className="fc-pin-dot" />}
+          {isLive && <span className="fc-live-dot" />}
           {data.routePath}
         </span>
         <span className="fc-node-actions">
-          {isLive && <span className="fc-live-dot" />}
+          <span className="fc-node-component">{data.componentName}</span>
           <button className={`fc-action-btn ${data.hasPinnedState ? 'is-pinned' : ''}`} onClick={handlePinClick} title="Pin state">
             ⚙
           </button>

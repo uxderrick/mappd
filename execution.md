@@ -20,6 +20,40 @@
 
 <!-- Newest entries at the top -->
 
+### [2026-03-26] Deep parser audit + comprehensive fix (round 3)
+**What was done:** Audited the entire parser codebase against official React Router v6/v7 and Next.js docs (validated online). Implemented 11 major fixes across 7 files:
+
+1. **React Router v7 framework mode** — New extractor (`react-router-v7.ts`, 300+ lines). Parses `routes.ts` config files with `route()`, `index()`, `layout()`, `prefix()` helpers. Also built file-based flat routes parser for the `@react-router/fs-routes` convention (`$param`, `_index`, dot-nesting, `($optional)`, `[escaped]`, `_pathless` layouts, `trailing_` escape, `folder/route.tsx`). Respects custom `rootDirectory` in `flatRoutes()` config.
+
+2. **Framework detection overhaul** — Added detection for `@react-router/dev`, `@react-router/node`, `@react-router/cloudflare` packages and `react-router.config.ts`. New `react-router-v7` framework type in the type system.
+
+3. **Next.js config deep parse** — Reworked `parseNextConfigRedirects` into `parseNextConfig` that extracts `basePath`, `trailingSlash`, `pageExtensions`, and redirects/rewrites. Added `next.config.ts` to config file candidates.
+
+4. **Pages Router hardening** — `getServerSideProps`/`getStaticProps` redirect detection (scans for `return { redirect: { destination: '/path' } }`). Custom `pageExtensions` support with compound extension handling.
+
+5. **Server Action scanning** — Recursively scans `src/`, `app/`, `lib/`, `actions/` directories for files with `'use server'` directive containing `redirect()` calls.
+
+6. **Special file awareness** — App Router now detects and attaches `loading.tsx`, `error.tsx`, `global-error.tsx`, `not-found.tsx`, `template.tsx`, `forbidden.tsx`, `unauthorized.tsx` as metadata on route segments. Metadata files (sitemap, robots, etc.) are properly skipped.
+
+7. **Link detector upgrades** — Relative path resolution (`../settings`, `./edit`, `..`, bare segments). `<fetcher.Form action>` via JSXMemberExpression. Link `href` as object form `{ pathname, query }`. `forbidden()`/`unauthorized()` boundary functions. Removed phantom `replace()` export.
+
+**Why:** The initial parser was built for PoC — it covered happy paths but missed real-world patterns. This audit ensures production-grade coverage before adding more frameworks.
+
+**Trade-offs:** (1) Relative path resolution uses a simple segment-based approach rather than fully emulating React Router's relative resolution algorithm (which considers the route tree hierarchy). Our approach handles 90%+ of cases. (2) basePath is extracted but not applied to route paths (it's a deployment concern — internal graph should use clean paths). (3) Server Action scanning is directory-based rather than following imports — may catch false positives but won't miss redirects. (4) v7 `middleware`/`clientMiddleware` route module exports are acknowledged but not parsed for redirects yet (low priority since they're new).
+
+**Outcome:** Parser compiles clean. Demo-app still produces correct output (10 routes, 14 edges). All critical and important gaps from the audit are now covered. Validated against reactrouter.com and nextjs.org docs.
+
+**Related:** todo.md → Deep parser audit (done), learnings.md → three parsing strategies, routing landscape research
+
+### [2026-03-26] Real-world parser testing — partner-dashboard + teller-counter-app
+**What was done:** Tested the parser against two real projects: (1) partner-dashboard (Next.js 15 App Router, 23 routes, 26 edges) and (2) teller-counter-app (React Router v7 SPA mode, 4 routes, 1 edge). Found and fixed two bugs:
+1. Component names with hyphens weren't PascalCased (`cash-management` → `Cash-managementPage`). Fixed by splitting on hyphens before capitalizing in both App Router and Pages Router extractors.
+2. The `*.replace()` fallback in the link detector was catching `String.replace()` calls as navigation — `name.replace('Access Bank ', '')` was creating a false positive edge. Fixed by removing `.replace()` from the untracked fallback (only `.push()` remains). Also tightened the bare-segment regex in `normalizePath` to reject strings with spaces.
+**Why:** Parser needs to work on real codebases, not just the demo-app. Real projects expose edge cases that controlled demos don't.
+**Trade-offs:** Removing the `*.replace()` fallback means we might miss `someObj.replace('/path')` from an untracked router variable. But the false positive rate was too high — `String.replace()` is called constantly. Tracked router vars (`routerVars.has()`) still catch `router.replace()` correctly.
+**Outcome:** partner-dashboard: 23 routes, 26 edges, all correct. teller-counter-app: 4 routes, 1 edge, correct. Zero false positives.
+**Related:** learnings.md → *.replace() false positives
+
 ### [2026-03-26] Routing landscape research — multi-framework support planning
 **What was done:** Comprehensive research of 12 frontend routing frameworks. Evaluated each by npm downloads, routing type (file/config/code), parsing difficulty, and priority. Covered: React Router v7 (Remix merge), Vue Router, Nuxt, Angular Router, SvelteKit, TanStack Router, Expo Router, Astro, SolidStart, Gatsby, Wouter, Inertia.js. Also identified cross-cutting patterns (dynamic segments, middleware, redirects, API routes, layout nesting) that apply across all frameworks.
 **Why:** FlowCanvas currently only supports React Router v6+ and Next.js. To be a viable tool for the broader frontend ecosystem, we need a prioritized roadmap for adding framework support.

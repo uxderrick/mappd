@@ -241,7 +241,6 @@ export function detectLinks(
         'redirect',
         'permanentRedirect',
         'redirectDocument',
-        'replace',
       ]);
       if (t.isIdentifier(callee) && redirectIdentifiers.has(callee.name)) {
         if (nodePath.node.arguments.length === 0) return;
@@ -410,7 +409,7 @@ export function detectLinks(
         return;
       }
 
-      // --- notFound() — triggers not-found boundary ---
+      // --- notFound() / forbidden() / unauthorized() — trigger boundary UIs ---
       if (t.isIdentifier(callee) && callee.name === 'notFound') {
         links.push({
           sourceFilePath: filePath,
@@ -420,6 +419,32 @@ export function detectLinks(
           triggerType: 'programmatic',
           targetPath: '/not-found',
           labelHint: 'Not Found',
+        });
+        return;
+      }
+
+      if (t.isIdentifier(callee) && callee.name === 'forbidden') {
+        links.push({
+          sourceFilePath: filePath,
+          sourceRoutePath: routePath,
+          sourceLine: nodePath.node.loc?.start.line ?? 0,
+          sourceColumn: nodePath.node.loc?.start.column ?? 0,
+          triggerType: 'programmatic',
+          targetPath: '/forbidden',
+          labelHint: 'Forbidden',
+        });
+        return;
+      }
+
+      if (t.isIdentifier(callee) && callee.name === 'unauthorized') {
+        links.push({
+          sourceFilePath: filePath,
+          sourceRoutePath: routePath,
+          sourceLine: nodePath.node.loc?.start.line ?? 0,
+          sourceColumn: nodePath.node.loc?.start.column ?? 0,
+          triggerType: 'programmatic',
+          targetPath: '/unauthorized',
+          labelHint: 'Unauthorized',
         });
         return;
       }
@@ -442,11 +467,12 @@ export function detectLinks(
       }
 
       // Fallback: catch any *.push() (covers untracked router vars)
+      // But NOT *.replace() — too many false positives (String.replace, Array.replace, etc.)
       if (
         !isNav &&
         t.isMemberExpression(callee) &&
         t.isIdentifier(callee.property) &&
-        (callee.property.name === 'push' || callee.property.name === 'replace')
+        callee.property.name === 'push'
       ) {
         isNav = true;
       }
@@ -716,13 +742,14 @@ function normalizePath(
   }
 
   // Bare segments like 'edit' — treat as relative to current route
-  // but only if they don't look like external URLs or fragments
+  // but only if they look like valid route segments (no spaces, no special chars)
   if (
     !detectedPath.includes(':') &&
     !detectedPath.includes('#') &&
     !detectedPath.includes('?') &&
     !detectedPath.includes('//') &&
-    /^[a-zA-Z0-9_\-$]/.test(detectedPath)
+    !detectedPath.includes(' ') &&
+    /^[a-zA-Z0-9_\-$][a-zA-Z0-9_\-$/]*$/.test(detectedPath)
   ) {
     return resolveRelativePath(sourceRoutePath, './' + detectedPath);
   }

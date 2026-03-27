@@ -70,14 +70,14 @@ html, body, #root {
   transition: transform var(--fc-transition);
 }
 
-/* Floating label — monospace route path */
+/* Floating label — Figma-style frame label */
 .fc-node-label {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 1px 5px 1px;
+  padding: 0 2px 4px 2px;
   cursor: grab;
-  min-height: 18px;
+  min-height: 20px;
 }
 
 .fc-node-label:active {
@@ -85,10 +85,9 @@ html, body, #root {
 }
 
 .fc-node-name {
-  font-family: var(--fc-font);
-  font-size: 10px;
-  font-weight: 400;
-  letter-spacing: -0.01em;
+  font-family: var(--fc-font-sans);
+  font-size: 11px;
+  font-weight: 500;
   color: var(--fc-text-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -105,6 +104,20 @@ html, body, #root {
 
 .fc-node-name.selected {
   color: var(--fc-accent);
+}
+
+/* Component name on the right side of label */
+.fc-node-component {
+  font-family: var(--fc-font);
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--fc-text-ghost);
+  transition: color var(--fc-transition);
+}
+
+.fc-node:hover .fc-node-component,
+.fc-node.is-active .fc-node-component {
+  color: var(--fc-text-muted);
 }
 
 .fc-node-actions {
@@ -166,33 +179,34 @@ html, body, #root {
   box-shadow: 0 0 6px var(--fc-live-dim);
 }
 
-/* Screen content — sharp rectangle, thin border */
+/* Screen content — sharp rectangle, Figma-style border */
 .fc-node-screen {
-  background: #fafafa;
+  background: #ffffff;
   overflow: hidden;
   position: relative;
-  border: 1px solid var(--fc-border);
-  border-radius: 1px;
+  border: 1px solid transparent;
+  border-radius: 0;
   transition: border-color var(--fc-transition);
 }
 
+/* Hover: subtle border appears */
 .fc-node:hover .fc-node-screen {
   border-color: var(--fc-border-hover);
 }
 
-/* Selection states */
+/* Selected/Active: dashed accent border like Figma */
 .fc-node.is-active .fc-node-screen {
-  border-color: var(--fc-accent);
-  box-shadow: 0 0 0 1px var(--fc-accent), 0 0 20px var(--fc-accent-glow);
+  border: 1.5px dashed var(--fc-accent);
 }
 
+/* Live: solid green border */
 .fc-node.is-live .fc-node-screen {
-  border-color: var(--fc-live);
-  box-shadow: 0 0 0 1px var(--fc-live), 0 0 12px var(--fc-live-dim);
+  border: 1.5px solid var(--fc-live);
 }
 
+/* React Flow selection: dashed accent */
 .react-flow__node.selected .fc-node-screen {
-  border-color: var(--fc-accent);
+  border: 1.5px dashed var(--fc-accent);
 }
 
 /* Placeholder */

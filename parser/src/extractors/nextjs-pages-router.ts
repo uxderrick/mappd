@@ -102,10 +102,11 @@ function getComponentName(routePath: string): string {
   const segments = routePath
     .split('/')
     .filter(Boolean)
-    .map((s) => {
+    .flatMap((s) => {
       if (s.startsWith(':')) s = s.replace(/^:/, '').replace(/\*$/, '');
-      return s.charAt(0).toUpperCase() + s.slice(1);
-    });
+      return s.split('-').filter(Boolean);
+    })
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1));
 
   return segments.join('') + 'Page';
 }

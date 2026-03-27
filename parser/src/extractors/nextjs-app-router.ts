@@ -11,6 +11,8 @@ const LOADING_FILES = ['loading.tsx', 'loading.ts', 'loading.jsx', 'loading.js']
 const ERROR_FILES = ['error.tsx', 'error.ts', 'error.jsx', 'error.js'];
 const GLOBAL_ERROR_FILES = ['global-error.tsx', 'global-error.ts', 'global-error.jsx', 'global-error.js'];
 const NOT_FOUND_FILES = ['not-found.tsx', 'not-found.ts', 'not-found.jsx', 'not-found.js'];
+const FORBIDDEN_FILES = ['forbidden.tsx', 'forbidden.ts', 'forbidden.jsx', 'forbidden.js'];
+const UNAUTHORIZED_FILES = ['unauthorized.tsx', 'unauthorized.ts', 'unauthorized.jsx', 'unauthorized.js'];
 
 // Metadata file conventions — these generate non-UI responses at specific URLs.
 // We skip them like route.ts (no page to render).
@@ -68,11 +70,16 @@ function scanDirectory(
   const notFoundFile = findFile(NOT_FOUND_FILES);
   const templateFile = findFile(TEMPLATE_FILES);
 
+  const forbiddenFile = findFile(FORBIDDEN_FILES);
+  const unauthorizedFile = findFile(UNAUTHORIZED_FILES);
+
   if (loadingFile) specialFiles.loading = loadingFile;
   if (errorFile) specialFiles.error = errorFile;
   if (globalErrorFile) specialFiles.globalError = globalErrorFile;
   if (notFoundFile) specialFiles.notFound = notFoundFile;
   if (templateFile) specialFiles.template = templateFile;
+  if (forbiddenFile) specialFiles.forbidden = forbiddenFile;
+  if (unauthorizedFile) specialFiles.unauthorized = unauthorizedFile;
 
   const hasSpecialFiles = Object.keys(specialFiles).length > 0;
 
@@ -203,15 +210,17 @@ function buildRoutePath(parentPath: string, dirName: string): string {
 function getComponentName(filePath: string, routePath: string): string {
   if (!routePath || routePath === '/') return 'HomePage';
 
-  // Convert /dashboard/settings → DashboardSettingsPage
+  // Convert /dashboard/cash-management → DashboardCashManagementPage
   const segments = routePath
     .split('/')
     .filter(Boolean)
-    .map((s) => {
+    .flatMap((s) => {
       // Strip dynamic markers  :slug*? → slug
       if (s.startsWith(':')) s = s.replace(/^:/, '').replace(/\*\??$/, '');
-      return s.charAt(0).toUpperCase() + s.slice(1);
-    });
+      // Split on hyphens to PascalCase each word
+      return s.split('-').filter(Boolean);
+    })
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1));
 
   return segments.join('') + 'Page';
 }

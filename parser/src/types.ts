@@ -17,6 +17,8 @@ export interface ParsedRoute {
     globalError?: string;
     notFound?: string;
     template?: string;
+    forbidden?: string;
+    unauthorized?: string;
   };
 }
 

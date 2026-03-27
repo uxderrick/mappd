@@ -44,10 +44,12 @@ Priorities: `P0` (critical/blocking), `P1` (important), `P2` (nice-to-have), `P3
 - [ ] **VS Code extension** — Canvas in a webview panel `[P2]` `[added: 2026-03-23]`
 - [ ] **Export canvas as image/PDF** `[P3]` `[added: 2026-03-23]`
 - [ ] **AI-assisted flow inference** `[P3]` `[added: 2026-03-23]`
+- [ ] **Interactive CLI fallback** — If auto-detect fails, prompt user to pick framework + entry point. Save to `.flowcanvas/config.json` so they only answer once. `[P1]` `[added: 2026-03-26]`
+
 ### Multi-Framework Router Support (researched 2026-03-26)
 
 **Phase 2 — P1 (highest adoption, biggest gaps)**
-- [ ] **React Router v7 full support** — `routes.ts` config, flat-routes filesystem, `<Form>`, `loader`/`action`, server `redirect()` `[P1]` `[added: 2026-03-26]`
+- [x] **React Router v7 full support** — `routes.ts` config, flat-routes filesystem, `<Form>`, `loader`/`action`, server `redirect()` `[P1]` `[done: 2026-03-26]`
 - [ ] **Vue Router** — Config-based `createRouter({ routes })`, `<router-link>`, `useRouter().push()`, navigation guards `[P1]` `[added: 2026-03-26]`
 - [ ] **Nuxt** — File-based `pages/` scanning, `[param]` segments, `navigateTo()`, `<NuxtLink>`, `middleware/` `[P1]` `[added: 2026-03-26]`
 - [ ] **Angular Router** — Config-based `Routes[]` arrays, `routerLink`, `Router.navigate()`, lazy `loadComponent`/`loadChildren` cross-file resolution `[P1]` `[added: 2026-03-26]`
@@ -74,6 +76,14 @@ _Nothing in progress._
 
 ## Done
 
+- [x] **Deep parser audit + comprehensive fix (round 3)** — Validated against official docs, fixed all critical gaps `[done: 2026-03-26]`
+  - React Router v7 framework mode: routes.ts config (route/index/layout/prefix), flat-routes filesystem ($param, _index, dot-nesting, ($optional), [escaped], folder/route.tsx), flatRoutes() rootDirectory support
+  - Framework detection: @react-router/dev, @react-router/node, @react-router/cloudflare, react-router.config.ts
+  - Next.js: next.config.ts support, basePath/trailingSlash/pageExtensions extraction, proxy.ts (v16 middleware rename)
+  - Next.js: getServerSideProps/getStaticProps redirect detection, Server Action ('use server') redirect scanning
+  - Next.js: loading.tsx, error.tsx, global-error.tsx, not-found.tsx, template.tsx, forbidden.tsx, unauthorized.tsx awareness
+  - Link detector: relative path resolution (../settings, ./edit, ..), fetcher.Form (JSXMemberExpression), Link href as object, forbidden()/unauthorized() functions
+  - Removed phantom replace() export, validated against reactrouter.com and nextjs.org docs
 - [x] **Parser final audit + fix (round 2)** — Second doc scrape found 10 more gaps, all fixed `[done: 2026-03-23]`
   - Object form href {{ pathname }}, useRoutes() hook, createRoutesFromElements wrapping
   - route.ts scanning for edges, fetcher.load/submit, NextResponse.redirect/rewrite
