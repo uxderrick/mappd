@@ -166,6 +166,21 @@ function AppInner() {
 
   const activeIframeRef = useRef<HTMLIFrameElement | null>(null);
 
+  // Listen for state override results from iframes
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === 'fc-override-state-result') {
+        if (e.data.success) {
+          console.log('[Mappd] State override succeeded:', e.data);
+        } else {
+          console.warn('[Mappd] State override failed:', e.data.error);
+        }
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
   const [config, setConfig] = useState<{ targetPort: number; wsPort: number } | null>(null);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
   const [graphData, setGraphData] = useState<{ baseNodes: Node<BaseNodeData>[]; edges: Edge[]; stateScreens: StateScreenInfo[]; framework?: string } | null>(null);
@@ -533,12 +548,16 @@ function AppInner() {
           }
         ) : []}
         onOverrideState={(hookIndex, value) => {
-          if (activeIframeRef.current) {
-            activeIframeRef.current.contentWindow?.postMessage({
+          const iframe = activeNodeId ? getIframe(activeNodeId) : null;
+          if (iframe) {
+            console.log('[Mappd] Sending state override:', { hookIndex, value, nodeId: activeNodeId });
+            iframe.contentWindow?.postMessage({
               type: 'fc-override-state',
               hookIndex,
               value,
             }, '*');
+          } else {
+            console.warn('[Mappd] No iframe found for active node:', activeNodeId);
           }
         }}
       />

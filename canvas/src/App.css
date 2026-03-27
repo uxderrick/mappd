@@ -1086,6 +1086,40 @@ html, body, #root {
   text-align: center;
 }
 
+.fc-cp-zoom-display {
+  font-family: var(--fc-font);
+  font-size: 11px;
+  color: var(--fc-text-secondary);
+  min-width: 44px;
+  text-align: center;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--fc-radius);
+  cursor: text;
+  padding: 2px 4px;
+  transition: all var(--fc-transition);
+}
+
+.fc-cp-zoom-display:hover {
+  border-color: var(--fc-border);
+  background: var(--fc-bg-void);
+  color: var(--fc-text-primary);
+}
+
+.fc-cp-zoom-input {
+  font-family: var(--fc-font);
+  font-size: 11px;
+  color: var(--fc-text-primary);
+  width: 44px;
+  text-align: center;
+  background: var(--fc-bg-void);
+  border: 1px solid var(--fc-accent);
+  border-radius: var(--fc-radius);
+  padding: 2px 4px;
+  box-shadow: 0 0 0 1px var(--fc-accent-dim);
+  outline: none;
+}
+
 .fc-cp-zoom-actions {
   display: flex;
   gap: 4px;

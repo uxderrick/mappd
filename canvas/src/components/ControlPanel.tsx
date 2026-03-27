@@ -106,9 +106,12 @@ export default function ControlPanel({
   stateScreens,
   onOverrideState,
 }: ControlPanelProps) {
-  const { fitView, zoomIn, zoomOut } = useReactFlow();
+  const { fitView, zoomIn, zoomOut, zoomTo } = useReactFlow();
   const { zoom } = useViewport();
+  const [editingZoom, setEditingZoom] = useState(false);
+  const [zoomInput, setZoomInput] = useState('');
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    pinState: true,
     zoom: true,
     viewport: true,
     display: true,
@@ -145,6 +148,17 @@ export default function ControlPanel({
   // Zoom controls
   const handleZoomIn = useCallback(() => zoomIn({ duration: 200 }), [zoomIn]);
   const handleZoomOut = useCallback(() => zoomOut({ duration: 200 }), [zoomOut]);
+  const handleZoomInputStart = useCallback(() => {
+    setZoomInput(String(zoomPercent));
+    setEditingZoom(true);
+  }, [zoomPercent]);
+  const handleZoomInputCommit = useCallback(() => {
+    const val = parseInt(zoomInput, 10);
+    if (!isNaN(val) && val >= 10 && val <= 400) {
+      zoomTo(val / 100, { duration: 200 });
+    }
+    setEditingZoom(false);
+  }, [zoomInput, zoomTo]);
   const handleFitAll = useCallback(
     () => fitView({ duration: 600, padding: 0.1 }),
     [fitView]
@@ -173,53 +187,81 @@ export default function ControlPanel({
     }
   }, [activeNodeId, routes, devServerUrl]);
 
-  // Export as PNG
-  const handleExportPng = useCallback(() => {
-    const viewport = document.querySelector('.react-flow__viewport') as HTMLElement;
-    if (!viewport) return;
-    const bgColor = canvasTheme === 'dark' ? '#0c0c0e' : '#e4e4e8';
-    toPng(viewport, {
-      backgroundColor: bgColor,
-      pixelRatio: 2,
-      filter: (node) => {
-        const classes = node.classList?.toString() ?? '';
-        return !classes.includes('react-flow__minimap') &&
-          !classes.includes('react-flow__controls') &&
-          !classes.includes('react-flow__panel') &&
-          !classes.includes('fc-control-panel') &&
-          !classes.includes('fc-status-bar') &&
-          !classes.includes('fc-screen-list');
-      },
-    }).then((dataUrl) => {
-      const link = document.createElement('a');
-      link.download = 'mappd-flow.png';
-      link.href = dataUrl;
-      link.click();
-    });
-  }, [canvasTheme]);
+  // Find the DOM element for the selected node (if any)
+  const getSelectedNodeElement = useCallback((): HTMLElement | null => {
+    if (!activeNodeId) return null;
+    // React Flow renders nodes with data-id attribute
+    const nodeEl = document.querySelector(`[data-id="${activeNodeId}"]`) as HTMLElement;
+    return nodeEl;
+  }, [activeNodeId]);
 
-  // Export as PDF
-  const handleExportPdf = useCallback(() => {
-    const viewport = document.querySelector('.react-flow__viewport') as HTMLElement;
-    if (!viewport) return;
+  const canvasFilter = (node: HTMLElement) => {
+    const classes = node.classList?.toString() ?? '';
+    return !classes.includes('react-flow__minimap') &&
+      !classes.includes('react-flow__controls') &&
+      !classes.includes('react-flow__panel') &&
+      !classes.includes('fc-control-panel') &&
+      !classes.includes('fc-status-bar') &&
+      !classes.includes('fc-screen-list');
+  };
+
+  // Export as PNG — selected node if active, full canvas if not
+  const handleExportPng = useCallback(() => {
     const bgColor = canvasTheme === 'dark' ? '#0c0c0e' : '#e4e4e8';
-    toPng(viewport, {
-      backgroundColor: bgColor,
-      pixelRatio: 2,
-      filter: (node) => {
-        const classes = node.classList?.toString() ?? '';
-        return !classes.includes('react-flow__minimap') &&
-          !classes.includes('react-flow__controls') &&
-          !classes.includes('react-flow__panel') &&
-          !classes.includes('fc-control-panel') &&
-          !classes.includes('fc-status-bar') &&
-          !classes.includes('fc-screen-list');
-      },
-    }).then((dataUrl) => {
+    const selectedNode = getSelectedNodeElement();
+    const activeRoute = routes.find(r => r.id === activeNodeId);
+
+    if (selectedNode) {
+      // Export just the selected node
+      toPng(selectedNode, {
+        backgroundColor: bgColor,
+        pixelRatio: 2,
+      }).then((dataUrl) => {
+        const link = document.createElement('a');
+        const routeName = activeRoute?.routePath.replace(/\//g, '-').replace(/^-/, '') || 'screen';
+        link.download = `mappd-${routeName}.png`;
+        link.href = dataUrl;
+        link.click();
+      });
+    } else {
+      // Export full canvas
+      const viewport = document.querySelector('.react-flow__viewport') as HTMLElement;
+      if (!viewport) return;
+      toPng(viewport, {
+        backgroundColor: bgColor,
+        pixelRatio: 2,
+        filter: canvasFilter,
+      }).then((dataUrl) => {
+        const link = document.createElement('a');
+        link.download = 'mappd-flow.png';
+        link.href = dataUrl;
+        link.click();
+      });
+    }
+  }, [canvasTheme, activeNodeId, getSelectedNodeElement, routes]);
+
+  // Export as PDF — selected node if active, full canvas if not
+  const handleExportPdf = useCallback(() => {
+    const bgColor = canvasTheme === 'dark' ? '#0c0c0e' : '#e4e4e8';
+    const selectedNode = getSelectedNodeElement();
+    const activeRoute = routes.find(r => r.id === activeNodeId);
+
+    const target = selectedNode || document.querySelector('.react-flow__viewport') as HTMLElement;
+    if (!target) return;
+
+    const opts = selectedNode
+      ? { backgroundColor: bgColor, pixelRatio: 2 }
+      : { backgroundColor: bgColor, pixelRatio: 2, filter: canvasFilter };
+
+    const title = selectedNode
+      ? `Mappd — ${activeRoute?.routePath || 'Screen'}`
+      : 'Mappd Flow';
+
+    toPng(target, opts).then((dataUrl) => {
       const printWindow = window.open('', '_blank');
       if (!printWindow) return;
       printWindow.document.write(
-        `<html><head><title>Mappd Flow</title>` +
+        `<html><head><title>${title}</title>` +
         `<style>body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:${bgColor}}` +
         `img{max-width:100%;max-height:100vh}@media print{body{background:white}}</style>` +
         `</head><body><img src="${dataUrl}" />` +
@@ -228,7 +270,7 @@ export default function ControlPanel({
       );
       printWindow.document.close();
     });
-  }, [canvasTheme]);
+  }, [canvasTheme, activeNodeId, getSelectedNodeElement, routes]);
 
   // Pin state handlers
   const handleParamChange = (name: string, value: string) => {
@@ -300,51 +342,63 @@ export default function ControlPanel({
 
             {/* ── Pin State ── */}
             <section className="fc-cp-section">
-              <h4 className="fc-cp-section-title">Pin state</h4>
-              <div style={{ marginBottom: paramNames.length > 0 ? 10 : 0 }}>
-                <div className="fc-cp-toggle-row" style={{ marginBottom: 4 }}>
-                  <span className="fc-cp-toggle-label">
-                    Auth <span className="pin-global-badge">GLOBAL</span>
+              <button className="fc-cp-section-toggle" onClick={() => toggleSection('pinState')}>
+                <span className="fc-cp-section-title" style={{ margin: 0 }}>Pin state</span>
+                {!openSections.pinState && (
+                  <span className="fc-cp-collapse-arrow-label">
+                    {authEnabled ? 'Auth on' : 'Auth off'}{paramNames.length > 0 ? `, ${paramNames.length} param${paramNames.length > 1 ? 's' : ''}` : ''}
                   </span>
-                  <button className={`fc-cp-pill-toggle ${authEnabled ? 'is-on' : ''}`} onClick={handleAuthToggle}>
-                    <span className="fc-cp-pill-knob" />
-                  </button>
-                </div>
-                {authEnabled && (
-                  <div className="fc-cp-pin-fields">
+                )}
+                <CaretDown size={10} className={`fc-cp-chevron ${openSections.pinState ? 'is-open' : ''}`} />
+              </button>
+              {openSections.pinState && (
+                <div className="fc-cp-section-body">
+                  <div style={{ marginBottom: paramNames.length > 0 ? 10 : 0 }}>
                     <div className="fc-cp-toggle-row" style={{ marginBottom: 4 }}>
-                      <span className="fc-cp-toggle-label">Logged In</span>
-                      <button className={`fc-cp-pill-toggle ${auth.isLoggedIn ? 'is-on' : ''}`} onClick={() => handleAuthChange('isLoggedIn', !auth.isLoggedIn)}>
+                      <span className="fc-cp-toggle-label">
+                        Auth <span className="pin-global-badge">GLOBAL</span>
+                      </span>
+                      <button className={`fc-cp-pill-toggle ${authEnabled ? 'is-on' : ''}`} onClick={handleAuthToggle}>
                         <span className="fc-cp-pill-knob" />
                       </button>
                     </div>
-                    <div className="pin-field">
-                      <label className="pin-label">Username</label>
-                      <input className="pin-input" type="text" value={auth.username ?? ''} onChange={(e) => handleAuthChange('username', e.target.value)} placeholder="testuser" />
-                    </div>
-                    <div className="pin-field">
-                      <label className="pin-label">Role</label>
-                      <input className="pin-input" type="text" value={auth.role ?? ''} onChange={(e) => handleAuthChange('role', e.target.value)} placeholder="admin" />
-                    </div>
-                    <div className="pin-field">
-                      <label className="pin-label">Token</label>
-                      <input className="pin-input" type="text" value={auth.token ?? ''} onChange={(e) => handleAuthChange('token', e.target.value)} placeholder="mock-jwt-token" />
-                    </div>
+                    {authEnabled && (
+                      <div className="fc-cp-pin-fields">
+                        <div className="fc-cp-toggle-row" style={{ marginBottom: 4 }}>
+                          <span className="fc-cp-toggle-label">Logged In</span>
+                          <button className={`fc-cp-pill-toggle ${auth.isLoggedIn ? 'is-on' : ''}`} onClick={() => handleAuthChange('isLoggedIn', !auth.isLoggedIn)}>
+                            <span className="fc-cp-pill-knob" />
+                          </button>
+                        </div>
+                        <div className="pin-field">
+                          <label className="pin-label">Username</label>
+                          <input className="pin-input" type="text" value={auth.username ?? ''} onChange={(e) => handleAuthChange('username', e.target.value)} placeholder="testuser" />
+                        </div>
+                        <div className="pin-field">
+                          <label className="pin-label">Role</label>
+                          <input className="pin-input" type="text" value={auth.role ?? ''} onChange={(e) => handleAuthChange('role', e.target.value)} placeholder="admin" />
+                        </div>
+                        <div className="pin-field">
+                          <label className="pin-label">Token</label>
+                          <input className="pin-input" type="text" value={auth.token ?? ''} onChange={(e) => handleAuthChange('token', e.target.value)} placeholder="mock-jwt-token" />
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              {paramNames.length > 0 && (
-                <div>
-                  <div className="fc-cp-toggle-row" style={{ marginBottom: 4 }}>
-                    <span className="fc-cp-toggle-label">URL Params <span className="pin-node-badge">THIS NODE</span></span>
-                  </div>
-                  {paramNames.map((name) => (
-                    <div key={name} className="pin-field">
-                      <label className="pin-label">:{name}</label>
-                      <input className="pin-input" type="text" value={urlParams[name] ?? ''} onChange={(e) => handleParamChange(name, e.target.value)} placeholder={`Value for :${name}`} />
+                  {paramNames.length > 0 && (
+                    <div>
+                      <div className="fc-cp-toggle-row" style={{ marginBottom: 4 }}>
+                        <span className="fc-cp-toggle-label">URL Params <span className="pin-node-badge">THIS NODE</span></span>
+                      </div>
+                      {paramNames.map((name) => (
+                        <div key={name} className="pin-field">
+                          <label className="pin-label">:{name}</label>
+                          <input className="pin-input" type="text" value={urlParams[name] ?? ''} onChange={(e) => handleParamChange(name, e.target.value)} placeholder={`Value for :${name}`} />
+                        </div>
+                      ))}
+                      <button className="fc-cp-btn fc-cp-btn-full" onClick={handleClearParams} style={{ marginTop: 4 }}>Clear Params</button>
                     </div>
-                  ))}
-                  <button className="fc-cp-btn fc-cp-btn-full" onClick={handleClearParams} style={{ marginTop: 4 }}>Clear Params</button>
+                  )}
                 </div>
               )}
             </section>
@@ -408,7 +462,21 @@ export default function ControlPanel({
                 <button className="fc-cp-btn fc-cp-btn-icon" onClick={handleZoomOut} title="Zoom out">
                   <Minus size={12} />
                 </button>
-                <span className="fc-cp-zoom-value">{zoomPercent}%</span>
+                {editingZoom ? (
+                  <input
+                    className="fc-cp-zoom-input"
+                    type="text"
+                    value={zoomInput}
+                    onChange={(e) => setZoomInput(e.target.value)}
+                    onBlur={handleZoomInputCommit}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleZoomInputCommit(); if (e.key === 'Escape') setEditingZoom(false); }}
+                    autoFocus
+                  />
+                ) : (
+                  <button className="fc-cp-zoom-display" onClick={handleZoomInputStart} title="Click to set zoom">
+                    {zoomPercent}%
+                  </button>
+                )}
                 <button className="fc-cp-btn fc-cp-btn-icon" onClick={handleZoomIn} title="Zoom in">
                   <Plus size={12} />
                 </button>
@@ -446,6 +514,11 @@ export default function ControlPanel({
         <section className="fc-cp-section">
           <button className="fc-cp-section-toggle" onClick={() => toggleSection('display')}>
             <span className="fc-cp-section-title" style={{ margin: 0 }}>Display</span>
+            {!openSections.display && (
+              <span className="fc-cp-collapse-arrow-label">
+                {canvasTheme === 'light' ? 'Light' : 'Dark'}{showEdges ? '' : ', no edges'}{showLabels ? '' : ', no labels'}
+              </span>
+            )}
             <CaretDown size={10} className={`fc-cp-chevron ${openSections.display ? 'is-open' : ''}`} />
           </button>
           {openSections.display && (
@@ -507,18 +580,31 @@ export default function ControlPanel({
         <section className="fc-cp-section">
           <button className="fc-cp-section-toggle" onClick={() => toggleSection('export')}>
             <span className="fc-cp-section-title" style={{ margin: 0 }}>Export</span>
+            {!openSections.export && (
+              <span className="fc-cp-collapse-arrow-label">PNG, PDF</span>
+            )}
             <CaretDown size={10} className={`fc-cp-chevron ${openSections.export ? 'is-open' : ''}`} />
           </button>
           {openSections.export && (
             <div className="fc-cp-section-body">
+              {activeNodeId && (
+                <div style={{ fontSize: 9, color: 'var(--fc-text-ghost)', marginBottom: 6, fontFamily: 'var(--fc-font-sans)' }}>
+                  Exporting: {routes.find(r => r.id === activeNodeId)?.routePath ?? 'selected screen'}
+                </div>
+              )}
+              {!activeNodeId && (
+                <div style={{ fontSize: 9, color: 'var(--fc-text-ghost)', marginBottom: 6, fontFamily: 'var(--fc-font-sans)' }}>
+                  Exporting: full canvas
+                </div>
+              )}
               <div className="fc-cp-actions">
                 <button className="fc-cp-btn fc-cp-btn-full" onClick={handleExportPng}>
                   <Download size={12} />
-                  PNG
+                  {activeNodeId ? 'PNG (screen)' : 'PNG (canvas)'}
                 </button>
                 <button className="fc-cp-btn fc-cp-btn-full" onClick={handleExportPdf}>
                   <FilePdf size={12} />
-                  PDF
+                  {activeNodeId ? 'PDF (screen)' : 'PDF (canvas)'}
                 </button>
               </div>
             </div>

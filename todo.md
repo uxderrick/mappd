@@ -64,7 +64,7 @@ Priorities: `P0` (critical/blocking), `P1` (important), `P2` (nice-to-have), `P3
   - **Canvas:** Takes up the middle, no more per-node DevTools (removes clutter, keeps node height consistent)
 
 ### Panel Design Polish (Figma-inspired)
-- [ ] **Figma-style panel hierarchy and spacing** — Redesign both panels to match Figma's information hierarchy `[P1]` `[added: 2026-03-27]`
+- [x] **Figma-style panel hierarchy and spacing** — All 10 points implemented: header as identity, sentence case titles, subtler borders, breathable spacing, inline editable zoom, consistent layout, collapsible sections with SVG chevrons, muted hierarchy, icon-only actions, collapsed one-liner summaries `[P1]` `[done: 2026-03-27]`
   - **Key patterns from Figma's right panel:**
     1. **Selected element name as header** — bold, large, with type icon + overflow menu (···). Not a section, it IS the panel identity
     2. **Section titles are single words** — "Position", "Auto layout", "Fill", "Stroke", "Effects". No sentence-case descriptions
@@ -81,9 +81,9 @@ Priorities: `P0` (critical/blocking), `P1` (important), `P2` (nice-to-have), `P3
     - Right panel: selected route as header, sections = Actions | Pin State | DevTools | Canvas. Each section title = single word, collapsible, icon-only action buttons
 
 ### Demo Apps (per-framework test fixtures)
-- [ ] **demo-react-router-v6** — Current demo-app, already built (React Router v6, Vite, 10 routes, state patterns) `[P1]` `[added: 2026-03-27]`
-- [ ] **demo-react-router-v7** — React Router v7 framework mode with `routes.ts`, flat-routes, loaders/actions `[P1]` `[added: 2026-03-27]`
-- [ ] **demo-nextjs-app** — Next.js App Router with route groups, dynamic routes, layouts, middleware `[P1]` `[added: 2026-03-27]`
+- [x] **demo-react-router-v6** — Already built (React Router v6, Vite, 10 routes, state patterns) `[P1]` `[done: 2026-03-27]`
+- [x] **demo-react-router-v7** — Already built `[P1]` `[done: 2026-03-27]`
+- [x] **demo-nextjs-app** — Already built `[P1]` `[done: 2026-03-27]`
 - [ ] **demo-nextjs-pages** — Next.js Pages Router with `getServerSideProps` redirects, dynamic routes `[P2]` `[added: 2026-03-27]`
 - [ ] **demo-vue** — Vue Router with `createRouter`, `<router-link>`, guards (when Vue parser is built) `[P2]` `[added: 2026-03-27]`
 - [ ] **demo-nuxt** — Nuxt with `pages/` directory, `navigateTo()`, middleware (when Nuxt parser is built) `[P2]` `[added: 2026-03-27]`
@@ -95,16 +95,12 @@ Priorities: `P0` (critical/blocking), `P1` (important), `P2` (nice-to-have), `P3
 - [x] **Investigate DevTools section** — Verify DevTools (Console/Network/Storage) works in right panel after moving from per-node. Test: does the iframe registry return the right ref? Does postMessage still flow? Are console entries attributed to the correct node? `[P1]` `[added: 2026-03-27]`
 - [x] **Panel breathing room** — Increased spacing across all panels (section padding, row gaps, font sizes, input heights). First pass done. `[P1]` `[done: 2026-03-27]`
 - [ ] **Iframe scroll handling** — When a node is selected and the user scrolls inside it, should the iframe content scroll or the canvas pan? Currently the overlay blocks scroll when not selected, and when selected pointer events pass through but scroll behavior is inconsistent. Need to decide: (1) scroll inside iframe when selected, (2) always pan canvas and never scroll iframe, or (3) hold a modifier key to switch between iframe scroll and canvas pan `[P1]` `[added: 2026-03-27]`
+- [ ] **Export selected screen** — When a node is selected and you export PNG/PDF, it should export just that screen (zoomed in, cropped to the node) instead of the full canvas. When no node is selected, export the full canvas as before `[P1]` `[added: 2026-03-27]`
+- [ ] **State override not working** — Clicking state screen buttons in the right panel does not override iframe state. Three issues to investigate: (1) `activeIframeRef` may be null if node isn't live/loaded — iframe registry only populates on iframe load, (2) `mappd-inject.js` must load before React to install `__REACT_DEVTOOLS_GLOBAL_HOOK__` — race condition with injection timing, (3) `overrideHookState` depends on React DevTools internals that may not work across all React versions. Need to verify the full chain: click → postMessage → inject script receives → renderer found → fiber walked → hook overridden `[P1]` `[added: 2026-03-27]`
 - [x] **Phosphor Icons** — Replaced all inline SVG icons with `@phosphor-icons/react`. Covers: ControlPanel (ArrowClockwise, Play, Monitor, PencilSimple, ArrowSquareOut, CaretDown, Minus, Plus, ArrowsClockwise, Download, FilePdf), ScreenListPanel (Browser), StatusBar (Monitor, ArrowsLeftRight, Question, X) `[P2]` `[done: 2026-03-27]`
 
 ### Phase 2+ Backlog
-- [ ] **Per-node DevTools panel** — Console, Network, Application tabs per screen node `[P1]` `[added: 2026-03-23]`
-  - Console: override `console.*` in iframe, forward via postMessage — **feasible**
-  - Network: monkey-patch `fetch`/`XMLHttpRequest`, capture req/res metadata — **feasible**
-  - Application: read `localStorage`, `sessionStorage`, cookies — **feasible**
-  - Sources: show component file path + "Open in Editor" link — **feasible as editor link**
-  - NOT feasible: breakpoints, step debugging, memory profiling (requires Chrome DevTools Protocol)
-  - Implementation: inject `fc-devtools.js` into each iframe, collapsible tabbed panel below preview
+- [x] **Per-node DevTools panel** — Console, Network, Storage tabs built. Moved from per-node to right panel (Figma-style). Uses iframe registry + postMessage for data flow `[P1]` `[done: 2026-03-27]`
 - [ ] **State-driven screen detection** — AST analysis for useState/useReducer patterns `[P2]` `[added: 2026-03-23]`
 - [ ] **Manual flow correction UI** — Drag to create/remove connections `[P2]` `[added: 2026-03-23]`
 - [ ] **VS Code extension** — Canvas in a webview panel `[P2]` `[added: 2026-03-23]`
