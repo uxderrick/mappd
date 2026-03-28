@@ -76,6 +76,8 @@ function ScreenNode({ data }: NodeProps<ScreenNodeType>) {
     if (!isLive) return;
     const handler = (e: MessageEvent) => {
       if (e.data?.type !== 'fc-wheel') return;
+      // Don't forward wheel events when node is selected — let iframe scroll its own content
+      if (data.isActive) return;
       const iframe = iframeRef.current;
       if (!iframe) return;
       if (e.source !== iframe.contentWindow) return;

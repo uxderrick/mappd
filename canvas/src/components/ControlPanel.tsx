@@ -229,13 +229,18 @@ export default function ControlPanel({
           return res.blob();
         })
         .then(blob => {
-          const url = URL.createObjectURL(blob);
+          // Ensure the blob has the right MIME type
+          const pngBlob = new Blob([blob], { type: 'image/png' });
+          const url = URL.createObjectURL(pngBlob);
           const link = document.createElement('a');
           const routeName = activeRoute.routePath.replace(/\//g, '-').replace(/^-/, '') || 'screen';
           link.download = `mappd-${routeName}.png`;
           link.href = url;
+          document.body.appendChild(link);
           link.click();
-          URL.revokeObjectURL(url);
+          document.body.removeChild(link);
+          // Revoke after a delay so the browser finishes downloading
+          setTimeout(() => URL.revokeObjectURL(url), 3000);
         })
         .catch(() => {
           // Fallback: open in new tab
@@ -503,7 +508,7 @@ export default function ControlPanel({
             <span className="fc-cp-section-title" style={{ margin: 0 }}>Display</span>
             {!openSections.display && (
               <span className="fc-cp-collapse-arrow-label">
-                {canvasTheme === 'light' ? 'Light' : 'Dark'}{showEdges ? '' : ', no edges'}{showLabels ? '' : ', no labels'}
+                {canvasTheme === 'light' ? 'Light' : 'Dark'}{showEdges ? '' : ', no edges'}{showLabels ? '' : ', no labels'}{hugContent ? ', hug' : ''}
               </span>
             )}
             <CaretDown size={10} className={`fc-cp-chevron ${openSections.display ? 'is-open' : ''}`} />
@@ -525,6 +530,10 @@ export default function ControlPanel({
                 <div className="fc-cp-toggle-row">
                   <span className="fc-cp-toggle-label">Labels</span>
                   <button className={`fc-cp-pill-toggle ${showLabels ? 'is-on' : ''}`} onClick={onToggleLabels}><span className="fc-cp-pill-knob" /></button>
+                </div>
+                <div className="fc-cp-toggle-row">
+                  <span className="fc-cp-toggle-label">Hug content</span>
+                  <button className={`fc-cp-pill-toggle ${hugContent ? 'is-on' : ''}`} onClick={onToggleHugContent}><span className="fc-cp-pill-knob" /></button>
                 </div>
                 <div className="fc-cp-toggle-col">
                   <span className="fc-cp-toggle-label">Edge style</span>

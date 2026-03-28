@@ -167,32 +167,6 @@ function AppInner() {
   const activeIframeRef = useRef<HTMLIFrameElement | null>(null);
 
   // Listen for state override results from iframes
-  useEffect(() => {
-    const handler = (e: MessageEvent) => {
-      if (e.data?.type === 'fc-override-state-result') {
-        if (e.data.success) {
-          console.log('[Mappd] State override succeeded:', e.data);
-        } else {
-          console.warn('[Mappd] State override failed:', e.data.error);
-        }
-      }
-      if (e.data?.type === 'fc-scroll-height') {
-        const route = e.data.route as string;
-        const height = e.data.scrollHeight as number;
-        // Find the node ID for this route
-        setScrollHeights((prev) => {
-          // Match route to node ID
-          const node = graphData?.baseNodes.find(n => n.data.routePath === route);
-          if (!node) return prev;
-          if (prev[node.id] === height) return prev;
-          return { ...prev, [node.id]: height };
-        });
-      }
-    };
-    window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
-  }, [graphData]);
-
   const [config, setConfig] = useState<{ targetPort: number; wsPort: number } | null>(null);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
   const [graphData, setGraphData] = useState<{ baseNodes: Node<BaseNodeData>[]; edges: Edge[]; stateScreens: StateScreenInfo[]; framework?: string } | null>(null);
@@ -208,6 +182,31 @@ function AppInner() {
   const [reloadKeys, setReloadKeys] = useState<Record<string, number>>({});
   const [hugContent, setHugContent] = useState(false);
   const [scrollHeights, setScrollHeights] = useState<Record<string, number>>({});
+
+  // Listen for messages from iframes (state override results, scroll heights)
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === 'fc-override-state-result') {
+        if (e.data.success) {
+          console.log('[Mappd] State override succeeded:', e.data);
+        } else {
+          console.warn('[Mappd] State override failed:', e.data.error);
+        }
+      }
+      if (e.data?.type === 'fc-scroll-height') {
+        const route = e.data.route as string;
+        const height = e.data.scrollHeight as number;
+        setScrollHeights((prev) => {
+          const node = graphData?.baseNodes.find(n => n.data.routePath === route);
+          if (!node) return prev;
+          if (prev[node.id] === height) return prev;
+          return { ...prev, [node.id]: height };
+        });
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [graphData]);
 
   const { zoom } = useViewport();
   const { fitView } = useReactFlow();
@@ -330,24 +329,16 @@ function AppInner() {
     if (prevViewportRef.current === viewportPreset) return;
     prevViewportRef.current = viewportPreset;
     setGraphData((prev) => {
-      if (!prev) return prev;
-      const relaid = layoutGraph(prev.baseNodes, prev.edges, layoutDirection, nodeHeight);
-      return { ...prev, baseNodes: relaid };
+      if (!prev || prev.baseNodes.length === 0) return prev;
+      try {
+        const relaid = layoutGraph(prev.baseNodes, prev.edges, layoutDirection, nodeHeight);
+        if (relaid.length === 0) return prev;
+        return { ...prev, baseNodes: relaid };
+      } catch {
+        return prev;
+      }
     });
   }, [viewportPreset, layoutDirection, nodeHeight]);
-
-  // Auto re-layout when hug content toggles
-  const prevHugRef = useRef(hugContent);
-  useEffect(() => {
-    if (prevHugRef.current === hugContent) return;
-    prevHugRef.current = hugContent;
-    setGraphData((prev) => {
-      if (!prev) return prev;
-      const heights = hugContent ? nodeHeightMap : undefined;
-      const relaid = layoutGraph(prev.baseNodes, prev.edges, layoutDirection, nodeHeight, heights);
-      return { ...prev, baseNodes: relaid };
-    });
-  }, [hugContent, layoutDirection, nodeHeight, nodeHeightMap]);
 
   // Compute per-node heights for hug content mode
   const nodeHeightMap = useMemo(() => {
@@ -364,11 +355,36 @@ function AppInner() {
     return Object.keys(map).length > 0 ? map : undefined;
   }, [hugContent, scrollHeights, baseNodes, vpDims]);
 
+  // Auto re-layout when hug content toggles
+  const prevHugRef = useRef(hugContent);
+  useEffect(() => {
+    if (prevHugRef.current === hugContent) return;
+    prevHugRef.current = hugContent;
+    setGraphData((prev) => {
+      if (!prev || prev.baseNodes.length === 0) return prev;
+      try {
+        const heights = hugContent ? nodeHeightMap : undefined;
+        const relaid = layoutGraph(prev.baseNodes, prev.edges, layoutDirection, nodeHeight, heights);
+        if (relaid.length === 0) return prev; // Don't replace with empty
+        return { ...prev, baseNodes: relaid };
+      } catch {
+        return prev; // Keep existing layout on error
+      }
+    });
+  }, [hugContent, layoutDirection, nodeHeight, nodeHeightMap]);
+
   const handleReLayout = useCallback(() => {
-    if (!graphData) return;
-    const relaid = layoutGraph(graphData.baseNodes, graphData.edges, layoutDirection, nodeHeight, nodeHeightMap);
-    setGraphData((prev) => prev ? { ...prev, baseNodes: relaid } : prev);
-  }, [graphData, layoutDirection, nodeHeight, nodeHeightMap]);
+    setGraphData((prev) => {
+      if (!prev || prev.baseNodes.length === 0) return prev;
+      try {
+        const relaid = layoutGraph(prev.baseNodes, prev.edges, layoutDirection, nodeHeight, nodeHeightMap);
+        if (relaid.length === 0) return prev;
+        return { ...prev, baseNodes: relaid };
+      } catch {
+        return prev;
+      }
+    });
+  }, [layoutDirection, nodeHeight, nodeHeightMap]);
 
   const handleLayoutDirectionChange = useCallback((dir: LayoutDirection) => {
     setLayoutDirection(dir);

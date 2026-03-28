@@ -84,6 +84,7 @@ Priorities: `P0` (critical/blocking), `P1` (important), `P2` (nice-to-have), `P3
 - [x] **demo-react-router-v6** — Already built (React Router v6, Vite, 10 routes, state patterns) `[P1]` `[done: 2026-03-27]`
 - [x] **demo-react-router-v7** — Already built `[P1]` `[done: 2026-03-27]`
 - [x] **demo-nextjs-app** — Already built `[P1]` `[done: 2026-03-27]`
+- [ ] **Add scroll-heavy pages to all demo apps** — Each demo app needs pages that test hug content: (1) Long static page (terms/data table with 50+ rows), (2) Lazy-loaded content (fetch → render, tests MutationObserver height re-reporting), (3) Infinite scroll feed (tests 3x height cap). Add to all 3 existing demos (v6, v7, nextjs-app) `[P1]` `[added: 2026-03-28]`
 - [ ] **demo-nextjs-pages** — Next.js Pages Router with `getServerSideProps` redirects, dynamic routes `[P2]` `[added: 2026-03-27]`
 - [ ] **demo-vue** — Vue Router with `createRouter`, `<router-link>`, guards (when Vue parser is built) `[P2]` `[added: 2026-03-27]`
 - [ ] **demo-nuxt** — Nuxt with `pages/` directory, `navigateTo()`, middleware (when Nuxt parser is built) `[P2]` `[added: 2026-03-27]`
