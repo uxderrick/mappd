@@ -18,11 +18,7 @@ function ScreenNode({ data }: NodeProps<ScreenNodeType>) {
   const nodeId = data.nodeId ?? '';
 
   const iframeWidth = data.viewportWidth ?? 1280;
-  const baseIframeHeight = data.viewportHeight ?? 800;
-  // In hug content mode, use the reported scroll height (capped at 3x viewport)
-  const iframeHeight = (data.hugContent && data.scrollHeight)
-    ? Math.min(data.scrollHeight, baseIframeHeight * 3)
-    : baseIframeHeight;
+  const iframeHeight = data.viewportHeight ?? 800;
   const nodeWidth = 480;
   const iframeScale = nodeWidth / iframeWidth;
   const containerHeight = Math.round(iframeHeight * iframeScale);
@@ -72,12 +68,22 @@ function ScreenNode({ data }: NodeProps<ScreenNodeType>) {
     }
   }, [data.pinnedState, isLive, iframeReady]);
 
+  // Notify iframe of scroll mode changes
+  useEffect(() => {
+    if (!isLive || !iframeReady || !iframeRef.current) return;
+    const enabled = !!(data.isActive && data.hugContent);
+    iframeRef.current.contentWindow?.postMessage({
+      type: 'fc-scroll-mode',
+      enabled,
+    }, '*');
+  }, [data.isActive, data.hugContent, isLive, iframeReady]);
+
   useEffect(() => {
     if (!isLive) return;
     const handler = (e: MessageEvent) => {
       if (e.data?.type !== 'fc-wheel') return;
-      // Don't forward wheel events when node is selected — let iframe scroll its own content
-      if (data.isActive) return;
+      // Only skip wheel forwarding when scroll mode is enabled on this node
+      if (data.isActive && data.hugContent) return;
       const iframe = iframeRef.current;
       if (!iframe) return;
       if (e.source !== iframe.contentWindow) return;

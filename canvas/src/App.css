@@ -789,6 +789,11 @@ html, body, #root {
   cursor: not-allowed;
 }
 
+.fc-cp-icon-btn.is-active {
+  color: var(--fc-accent);
+  background: var(--fc-accent-dim);
+}
+
 .fc-cp-title {
   font-size: 10px;
   font-weight: 600;

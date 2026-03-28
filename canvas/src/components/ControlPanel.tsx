@@ -9,6 +9,7 @@ import {
   Download,
   Minus,
   Monitor,
+  MouseSimple,
   PencilSimple,
   Play,
   Plus,
@@ -324,6 +325,13 @@ export default function ControlPanel({
             <button className="fc-cp-icon-btn" onClick={handleOpenInBrowser} title="Open in browser">
               <ArrowSquareOut size={14} />
             </button>
+            <button
+              className={`fc-cp-icon-btn ${hugContent ? 'is-active' : ''}`}
+              onClick={onToggleHugContent}
+              title={hugContent ? 'Scroll mode on (click to disable)' : 'Enable scroll mode'}
+            >
+              <MouseSimple size={14} />
+            </button>
           </div>
         )}
       </div>
@@ -508,7 +516,7 @@ export default function ControlPanel({
             <span className="fc-cp-section-title" style={{ margin: 0 }}>Display</span>
             {!openSections.display && (
               <span className="fc-cp-collapse-arrow-label">
-                {canvasTheme === 'light' ? 'Light' : 'Dark'}{showEdges ? '' : ', no edges'}{showLabels ? '' : ', no labels'}{hugContent ? ', hug' : ''}
+                {canvasTheme === 'light' ? 'Light' : 'Dark'}{showEdges ? '' : ', no edges'}{showLabels ? '' : ', no labels'}
               </span>
             )}
             <CaretDown size={10} className={`fc-cp-chevron ${openSections.display ? 'is-open' : ''}`} />
@@ -530,10 +538,6 @@ export default function ControlPanel({
                 <div className="fc-cp-toggle-row">
                   <span className="fc-cp-toggle-label">Labels</span>
                   <button className={`fc-cp-pill-toggle ${showLabels ? 'is-on' : ''}`} onClick={onToggleLabels}><span className="fc-cp-pill-knob" /></button>
-                </div>
-                <div className="fc-cp-toggle-row">
-                  <span className="fc-cp-toggle-label">Hug content</span>
-                  <button className={`fc-cp-pill-toggle ${hugContent ? 'is-on' : ''}`} onClick={onToggleHugContent}><span className="fc-cp-pill-knob" /></button>
                 </div>
                 <div className="fc-cp-toggle-col">
                   <span className="fc-cp-toggle-label">Edge style</span>

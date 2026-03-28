@@ -181,9 +181,8 @@ function AppInner() {
   const [liveOverrides, setLiveOverrides] = useState<Record<string, boolean>>({});
   const [reloadKeys, setReloadKeys] = useState<Record<string, number>>({});
   const [hugContent, setHugContent] = useState(false);
-  const [scrollHeights, setScrollHeights] = useState<Record<string, number>>({});
 
-  // Listen for messages from iframes (state override results, scroll heights)
+  // Listen for state override results from iframes
   useEffect(() => {
     const handler = (e: MessageEvent) => {
       if (e.data?.type === 'fc-override-state-result') {
@@ -193,20 +192,10 @@ function AppInner() {
           console.warn('[Mappd] State override failed:', e.data.error);
         }
       }
-      if (e.data?.type === 'fc-scroll-height') {
-        const route = e.data.route as string;
-        const height = e.data.scrollHeight as number;
-        setScrollHeights((prev) => {
-          const node = graphData?.baseNodes.find(n => n.data.routePath === route);
-          if (!node) return prev;
-          if (prev[node.id] === height) return prev;
-          return { ...prev, [node.id]: height };
-        });
-      }
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [graphData]);
+  }, []);
 
   const { zoom } = useViewport();
   const { fitView } = useReactFlow();
@@ -340,51 +329,18 @@ function AppInner() {
     });
   }, [viewportPreset, layoutDirection, nodeHeight]);
 
-  // Compute per-node heights for hug content mode
-  const nodeHeightMap = useMemo(() => {
-    if (!hugContent) return undefined;
-    const map: Record<string, number> = {};
-    for (const node of baseNodes) {
-      const sh = scrollHeights[node.id];
-      if (sh) {
-        const baseH = vpDims.height;
-        const cappedH = Math.min(sh, baseH * 3);
-        map[node.id] = Math.round(cappedH * (480 / vpDims.width)) + 30;
-      }
-    }
-    return Object.keys(map).length > 0 ? map : undefined;
-  }, [hugContent, scrollHeights, baseNodes, vpDims]);
-
-  // Auto re-layout when hug content toggles
-  const prevHugRef = useRef(hugContent);
-  useEffect(() => {
-    if (prevHugRef.current === hugContent) return;
-    prevHugRef.current = hugContent;
-    setGraphData((prev) => {
-      if (!prev || prev.baseNodes.length === 0) return prev;
-      try {
-        const heights = hugContent ? nodeHeightMap : undefined;
-        const relaid = layoutGraph(prev.baseNodes, prev.edges, layoutDirection, nodeHeight, heights);
-        if (relaid.length === 0) return prev; // Don't replace with empty
-        return { ...prev, baseNodes: relaid };
-      } catch {
-        return prev; // Keep existing layout on error
-      }
-    });
-  }, [hugContent, layoutDirection, nodeHeight, nodeHeightMap]);
-
   const handleReLayout = useCallback(() => {
     setGraphData((prev) => {
       if (!prev || prev.baseNodes.length === 0) return prev;
       try {
-        const relaid = layoutGraph(prev.baseNodes, prev.edges, layoutDirection, nodeHeight, nodeHeightMap);
+        const relaid = layoutGraph(prev.baseNodes, prev.edges, layoutDirection, nodeHeight);
         if (relaid.length === 0) return prev;
         return { ...prev, baseNodes: relaid };
       } catch {
         return prev;
       }
     });
-  }, [layoutDirection, nodeHeight, nodeHeightMap]);
+  }, [layoutDirection, nodeHeight]);
 
   const handleLayoutDirectionChange = useCallback((dir: LayoutDirection) => {
     setLayoutDirection(dir);
@@ -409,6 +365,9 @@ function AppInner() {
     [baseNodes]
   );
 
+  // Stabilize zoom — only recalculate nodes when crossing the threshold, not on every scroll
+  const zoomAboveThreshold = zoom > 0.3;
+
   // Build nodes with pinned state and computed iframeSrc
   const nodes: Node<ScreenNodeData>[] = useMemo(
     () =>
@@ -429,8 +388,8 @@ function AppInner() {
             iframeSrc,
             isActive: node.id === activeNodeId,
             screenshotUrl: screenshots[node.id] || undefined,
-            zoomLevel: zoom,
-            canGoLive: shouldLoad(node.id),
+            zoomLevel: zoom > 0.3 ? 1 : 0, // Stabilized — only changes at threshold
+            canGoLive: true, // Always allow — queue manages concurrency internally
             pinnedState: pin,
             hasPinnedState: hasPinForNode(node.id),
             viewportWidth: vpDims.width,
@@ -439,7 +398,6 @@ function AppInner() {
             reloadKey: reloadKeys[node.id] ?? 0,
             hideLabel: !showLabels,
             hugContent,
-            scrollHeight: scrollHeights[node.id],
             onDoubleClick: handleDoubleClickNode,
             onRequestLoad: handleRequestLoad,
             onIframeLoaded: handleIframeLoaded,
@@ -449,7 +407,7 @@ function AppInner() {
           },
         };
       }),
-    [activeNodeId, baseNodes, screenshots, zoom, devServerUrl, shouldLoad, getPinForNode, hasPinForNode, handleRequestLoad, handleIframeLoaded, handleDoubleClickNode, vpDims, liveOverrides, reloadKeys, showLabels, hugContent, scrollHeights]
+    [activeNodeId, baseNodes, screenshots, zoomAboveThreshold, devServerUrl, getPinForNode, hasPinForNode, handleRequestLoad, handleIframeLoaded, handleDoubleClickNode, vpDims, liveOverrides, reloadKeys, showLabels, hugContent]
   );
 
   const edges = useMemo(

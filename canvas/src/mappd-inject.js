@@ -509,9 +509,20 @@
   });
 
   // --- Forward wheel events for canvas zoom ---
+  var scrollModeEnabled = false;
+
+  // Parent can toggle scroll mode via postMessage
+  window.addEventListener('message', function (e) {
+    if (e.data && e.data.type === 'fc-scroll-mode') {
+      scrollModeEnabled = !!e.data.enabled;
+    }
+  });
+
   window.addEventListener(
     'wheel',
     function (e) {
+      // In scroll mode, don't forward — let the iframe scroll naturally
+      if (scrollModeEnabled) return;
       window.parent.postMessage(
         {
           type: 'fc-wheel',
