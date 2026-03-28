@@ -25,6 +25,8 @@ export interface ScreenNodeData {
   viewportHeight?: number;
   forceLive?: boolean;
   reloadKey?: number;
+  hugContent?: boolean;
+  scrollHeight?: number;
   hideLabel?: boolean;
   onDoubleClick?: (nodeId: string) => void;
   onRequestLoad?: (nodeId: string) => void;

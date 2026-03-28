@@ -197,37 +197,46 @@
   // =============================================
 
   /**
+   * Check if a fiber has a hook with a queue at the given index.
+   */
+  function fiberHasHookAt(fiber, hookIndex) {
+    var state = fiber.memoizedState;
+    var idx = 0;
+    while (state) {
+      if (idx === hookIndex && (state.queue || state.memoizedState !== undefined)) {
+        return true;
+      }
+      state = state.next;
+      idx++;
+    }
+    return false;
+  }
+
+  /**
    * Find a fiber by component name, then validate it has a hook at hookIndex.
+   * If the named component doesn't have the hook, search its subtree
+   * (handles inner/child components like DashboardHome inside DashboardPage).
    */
   function findFiberByComponentName(fiber, componentName, hookIndex) {
     if (!fiber) return null;
 
-    // Check if this fiber's type matches the component name
     var typeName = fiber.type && (fiber.type.name || fiber.type.displayName);
     if (typeName === componentName) {
-      // Verify it has a hook at the given index
-      // Accept both useState (state.queue) and useReducer (state.queue with dispatch)
-      var state = fiber.memoizedState;
-      var idx = 0;
-      while (state) {
-        if (idx === hookIndex) {
-          // Found a hook at the right index — accept it if it has queue or memoizedState
-          if (state.queue || state.memoizedState !== undefined) {
-            return fiber;
-          }
-        }
-        state = state.next;
-        idx++;
-      }
-      // Even if we didn't find the exact hookIndex, return the fiber if name matches
-      // (hookIndex from parser might count differently than runtime)
-      if (fiber.memoizedState) {
-        console.log('[mappd-inject] Component found but hookIndex ' + hookIndex + ' not matched, using first hook');
+      // Found the named component — check if IT has the hook
+      if (fiberHasHookAt(fiber, hookIndex)) {
         return fiber;
       }
+      // If not, search its subtree for a child that has the hook
+      console.log('[mappd-inject] ' + componentName + ' found but no hook at index ' + hookIndex + ', searching subtree');
+      var subtreeMatch = findFiberWithHook(fiber, hookIndex);
+      if (subtreeMatch) {
+        console.log('[mappd-inject] Found hook in subtree: ' + (subtreeMatch.type && (subtreeMatch.type.name || subtreeMatch.type.displayName) || 'anonymous'));
+        return subtreeMatch;
+      }
+      return null;
     }
 
-    // Recurse into children
+    // Recurse into children to find the named component
     var child = fiber.child;
     while (child) {
       var found = findFiberByComponentName(child, componentName, hookIndex);
@@ -675,5 +684,54 @@
       sessionStorage: ss,
       cookies: document.cookie || '',
     }, '*');
+  });
+
+  // =============================================
+  // Scroll height reporting (for "hug content" mode)
+  // Reports the full page scroll height so the canvas
+  // can resize the node to show all content without scrolling.
+  // =============================================
+
+  var lastReportedHeight = 0;
+  var MAX_HEIGHT = 10000; // Cap to prevent absurdly tall nodes
+
+  function reportScrollHeight() {
+    var h = Math.min(
+      Math.max(document.documentElement.scrollHeight, document.body.scrollHeight),
+      MAX_HEIGHT
+    );
+    if (h !== lastReportedHeight && h > 0) {
+      lastReportedHeight = h;
+      window.parent.postMessage({
+        type: 'fc-scroll-height',
+        route: originalPathname,
+        scrollHeight: h,
+      }, '*');
+    }
+  }
+
+  // Report after page loads
+  window.addEventListener('load', function () {
+    setTimeout(reportScrollHeight, 500);
+  });
+
+  // Re-report on DOM changes (lazy-loaded content, API responses rendering)
+  if (typeof MutationObserver !== 'undefined') {
+    var heightObserver = new MutationObserver(function () {
+      requestAnimationFrame(reportScrollHeight);
+    });
+    // Start observing once DOM is ready
+    if (document.body) {
+      heightObserver.observe(document.body, { childList: true, subtree: true, attributes: false });
+    } else {
+      document.addEventListener('DOMContentLoaded', function () {
+        heightObserver.observe(document.body, { childList: true, subtree: true, attributes: false });
+      });
+    }
+  }
+
+  // Also report on resize
+  window.addEventListener('resize', function () {
+    requestAnimationFrame(reportScrollHeight);
   });
 })();

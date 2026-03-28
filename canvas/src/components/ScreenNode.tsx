@@ -18,7 +18,11 @@ function ScreenNode({ data }: NodeProps<ScreenNodeType>) {
   const nodeId = data.nodeId ?? '';
 
   const iframeWidth = data.viewportWidth ?? 1280;
-  const iframeHeight = data.viewportHeight ?? 800;
+  const baseIframeHeight = data.viewportHeight ?? 800;
+  // In hug content mode, use the reported scroll height (capped at 3x viewport)
+  const iframeHeight = (data.hugContent && data.scrollHeight)
+    ? Math.min(data.scrollHeight, baseIframeHeight * 3)
+    : baseIframeHeight;
   const nodeWidth = 480;
   const iframeScale = nodeWidth / iframeWidth;
   const containerHeight = Math.round(iframeHeight * iframeScale);

@@ -54,6 +54,8 @@ interface ControlPanelProps {
   onEdgeStyleChange: (style: EdgeStyle) => void;
   onReloadScreen: (nodeId: string) => void;
   onToggleLive: (nodeId: string) => void;
+  hugContent: boolean;
+  onToggleHugContent: () => void;
   liveOverrides: Record<string, boolean>;
   // Pin state
   pinnedState?: PinnedState;
@@ -92,6 +94,8 @@ export default function ControlPanel({
   onReloadScreen,
   onToggleLive,
   liveOverrides,
+  hugContent,
+  onToggleHugContent,
   pinnedState,
   globalAuth,
   onUpdatePin,
@@ -212,24 +216,31 @@ export default function ControlPanel({
     const activeRoute = routes.find(r => r.id === activeNodeId);
 
     if (activeNodeId && activeRoute) {
-      // Selected screen — open route directly for the user to screenshot
-      // Also check if we have a cached screenshot
-      const screenshotUrl = `/screenshots/${activeNodeId}.png`;
-      fetch(screenshotUrl, { method: 'HEAD' }).then(res => {
-        if (res.ok) {
-          // Use cached Puppeteer screenshot
+      // Selected screen — capture fresh screenshot via Puppeteer API
+      let routeForUrl = activeRoute.routePath;
+      if (routeForUrl.includes(':')) {
+        routeForUrl = routeForUrl.replace(/:(\w+)/g, '1');
+      }
+      const apiUrl = `/api/screenshot?path=${encodeURIComponent(routeForUrl)}`;
+
+      fetch(apiUrl)
+        .then(res => {
+          if (!res.ok) throw new Error('Screenshot failed');
+          return res.blob();
+        })
+        .then(blob => {
+          const url = URL.createObjectURL(blob);
           const link = document.createElement('a');
           const routeName = activeRoute.routePath.replace(/\//g, '-').replace(/^-/, '') || 'screen';
           link.download = `mappd-${routeName}.png`;
-          link.href = screenshotUrl;
+          link.href = url;
           link.click();
-        } else {
-          // No screenshot — open route in new tab for manual capture
-          window.open(`${devServerUrl}${activeRoute.routePath}`, '_blank');
-        }
-      }).catch(() => {
-        window.open(`${devServerUrl}${activeRoute.routePath}`, '_blank');
-      });
+          URL.revokeObjectURL(url);
+        })
+        .catch(() => {
+          // Fallback: open in new tab
+          window.open(`${devServerUrl}${routeForUrl}`, '_blank');
+        });
     } else {
       // Full canvas export
       const viewport = document.querySelector('.react-flow__viewport') as HTMLElement;

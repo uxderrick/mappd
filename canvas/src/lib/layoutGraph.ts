@@ -10,7 +10,8 @@ export function layoutGraph<T extends Record<string, unknown> = Record<string, u
   nodes: Node<T>[],
   edges: Edge[],
   direction: LayoutDirection = 'LR',
-  nodeHeight: number = DEFAULT_NODE_HEIGHT
+  nodeHeight: number = DEFAULT_NODE_HEIGHT,
+  nodeHeights?: Record<string, number>
 ): Node<T>[] {
   if (nodes.length === 0) return [];
 
@@ -27,10 +28,10 @@ export function layoutGraph<T extends Record<string, unknown> = Record<string, u
   const nodeIds = new Set(nodes.map((n) => n.id));
 
   for (const node of nodes) {
-    g.setNode(node.id, { width: NODE_WIDTH, height: nodeHeight });
+    const h = nodeHeights?.[node.id] ?? nodeHeight;
+    g.setNode(node.id, { width: NODE_WIDTH, height: h });
   }
 
-  // Only add edges where both source and target exist
   for (const edge of edges) {
     if (nodeIds.has(edge.source) && nodeIds.has(edge.target)) {
       g.setEdge(edge.source, edge.target);
@@ -40,7 +41,6 @@ export function layoutGraph<T extends Record<string, unknown> = Record<string, u
   try {
     dagre.layout(g);
   } catch {
-    // Fallback: simple grid layout if dagre fails
     const cols = Math.ceil(Math.sqrt(nodes.length));
     return nodes.map((node, i) => ({
       ...node,
@@ -53,11 +53,12 @@ export function layoutGraph<T extends Record<string, unknown> = Record<string, u
 
   return nodes.map((node) => {
     const pos = g.node(node.id);
+    const h = nodeHeights?.[node.id] ?? nodeHeight;
     return {
       ...node,
       position: {
         x: pos.x - NODE_WIDTH / 2,
-        y: pos.y - nodeHeight / 2,
+        y: pos.y - h / 2,
       },
     };
   });

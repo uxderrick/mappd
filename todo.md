@@ -101,7 +101,31 @@ Priorities: `P0` (critical/blocking), `P1` (important), `P2` (nice-to-have), `P3
 
 ### Phase 2+ Backlog
 - [x] **Per-node DevTools panel** — Console, Network, Storage tabs built. Moved from per-node to right panel (Figma-style). Uses iframe registry + postMessage for data flow `[P1]` `[done: 2026-03-27]`
-- [ ] **State-driven screen detection** — AST analysis for useState/useReducer patterns `[P2]` `[added: 2026-03-23]`
+- [x] **State-driven screen detection** — AST analysis for useState/useReducer patterns. Parser detects state hooks, canvas overrides them via fiber dispatch. Works for React Router v6/v7, Next.js App/Pages `[P2]` `[done: 2026-03-28]`
+
+### State Override Matrix (roadmap)
+**Currently supported:**
+- [x] React `useState` (primitives) — via `queue.dispatch(value)` `[done: 2026-03-28]`
+- [x] React `useReducer` (single-key state, SET_KEY convention) — via `queue.dispatch({ type: 'SET_KEY', payload: value })` `[done: 2026-03-28]`
+
+**Phase 2 — React ecosystem stores:**
+- [ ] **Zustand** — override via `store.setState()`. Parser detects `create()` store definitions, inject script calls `setState` directly `[P1]`
+- [ ] **Redux / Redux Toolkit** — override via `store.dispatch()`. Parser detects `createSlice`, inject script dispatches actions `[P1]`
+- [ ] **React Context** — state lives in a Provider higher up the tree. Need to walk fiber tree to find the Provider and override its state `[P2]`
+- [ ] **Jotai / Recoil** — atom-based, override via `store.set(atom, value)` `[P2]`
+- [ ] **MobX** — observable-based, override via direct property mutation `[P3]`
+- [ ] **URL state** (search params, hash) — override via `history.replaceState` with new params `[P2]`
+
+**Phase 3 — Non-React frameworks (build alongside parsers):**
+- [ ] **Vue** — `ref()` / `reactive()` / Pinia stores. Vue DevTools has its own hook protocol `[P1]`
+- [ ] **Svelte** — `$state` / stores. Svelte DevTools protocol `[P2]`
+- [ ] **Angular** — signals / RxJS / NgRx. Angular DevTools protocol `[P2]`
+
+**Known limitations:**
+- Custom reducers with non-standard action formats (e.g., `{ kind: 'navigate' }` instead of `{ type: 'SET_X' }`)
+- Custom hooks that wrap multiple `useState` calls (hook index mismatch between parser AST and runtime)
+- React Server Components (no client-side hooks to override)
+- Server state (React Query, SWR, tRPC) — cached responses, not overridable via hooks
 - [ ] **Manual flow correction UI** — Drag to create/remove connections `[P2]` `[added: 2026-03-23]`
 - [ ] **VS Code extension** — Canvas in a webview panel `[P2]` `[added: 2026-03-23]`
 - [x] **Export canvas as image** — PNG export built into control panel (PDF removed — PNG covers all use cases) `[P3]` `[done: 2026-03-27]`

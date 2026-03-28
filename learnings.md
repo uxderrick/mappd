@@ -19,6 +19,36 @@
 
 <!-- Newest entries at the top -->
 
+### [2026-03-28] React state override: dispatch > overrideHookState
+**Context:** Building state-driven screen detection — clicking a state button should change the iframe's UI
+**Learning:** React DevTools' `overrideHookState(fiber, hookIndex, path, value)` sets the value internally but does NOT trigger a re-render in React 19. The reliable approach is to call `hookState.queue.dispatch(value)` directly — this is the actual setter function (`setStep`, `setTab`, etc.) that React uses internally. It triggers a proper re-render because it goes through React's normal scheduling.
+**Why it matters:** Any future state manipulation (Zustand, Redux, etc.) should use the library's own dispatch/setState API rather than trying to poke internal state. The pattern is: find the mechanism the component itself uses to update, and call that.
+**Related:** mappd-inject.js, execution.md
+
+### [2026-03-28] useReducer dispatch needs action objects, not raw values
+**Context:** State override worked for `useState` (CreateProjectPage steps) but not `useReducer` (AnalyticsPage views)
+**Learning:** `useState`'s `dispatch` accepts the new value directly. `useReducer`'s `dispatch` expects an action object (e.g., `{ type: 'SET_VIEW', payload: 'detailed' }`). Sending a raw value silently fails — the reducer's switch statement doesn't match any case and returns the existing state. The fix: inspect the current state object shape, find the key name, and construct `{ type: 'SET_<KEY>', payload: value }`. This heuristic works for the common `SET_X` convention. Custom action formats would need the parser to detect the action type from the source code.
+**Why it matters:** When adding new state management support (Redux, Zustand), each has its own dispatch contract. The parser needs to capture not just "what values the state can be" but "how to tell the store to change to that value."
+**Related:** mappd-inject.js
+
+### [2026-03-28] Fiber root detection: onCommitFiberRoot > DOM walking
+**Context:** `getFiberRoot()` couldn't find React's fiber tree — returned null in React 19
+**Learning:** React 19 uses `__reactContainer$xxx` on root DOM elements (not `__reactFiber$`). But the most reliable approach is to track roots via `__REACT_DEVTOOLS_GLOBAL_HOOK__.onCommitFiberRoot(rendererId, root)` — React calls this on every commit, so we always have a reference to every root. No DOM key guessing needed. The `root.current` property points to the root fiber for tree walking.
+**Why it matters:** Don't rely on DOM property key prefixes — they're internal and can change between React versions. The DevTools hook protocol (`inject`, `onCommitFiberRoot`) has been stable across React 16→19 and is the intended integration point.
+**Related:** mappd-inject.js
+
+### [2026-03-28] Component name from parser ≠ component name at runtime
+**Context:** Parser's `stateScreens` had `componentName: "div"` — the rendered JSX element, not the React component
+**Learning:** The parser's AST analysis identifies the conditionally rendered element (a `<div>`), not the parent component function. The route node's `componentName` (from the file's default export) is the correct name to match against `fiber.type.name`. Always use the route-level component name for fiber search, not the stateScreen's `componentName`.
+**Why it matters:** This distinction will matter for every framework — the parser knows file-level component names, but state screen entries might reference child elements. Keep these separate in the data model.
+**Related:** App.tsx, flow-graph.json
+
+### [2026-03-28] Figma's panel model: identity header + context-aware sections
+**Context:** Redesigning the right panel to match Figma's information hierarchy
+**Learning:** Figma's key insight: the panel header IS the selected element — not a generic "Properties" label. When nothing is selected, the header says the canvas/project name. When something is selected, it shows that element's name prominently, with actions as icon buttons on the same row. Sections below are context-aware — they appear/disappear based on selection. Canvas-wide settings (zoom, viewport, display) collapse behind a disclosure when node-specific content takes priority. This hierarchy — identity first, context-aware content second, global settings third — prevents the "wall of controls" problem.
+**Why it matters:** Any tool with a properties panel should follow this pattern. The header isn't chrome — it's the most important piece of information.
+**Related:** ControlPanel.tsx, App.css
+
 ### [2026-03-27] Interactive CLI fallback is essential for real-world adoption
 **Context:** Testing on projects where auto-detect failed (no recognized router in package.json or unconventional structure).
 **Learning:** Three-tier fallback is the right pattern: auto-detect → saved config → interactive prompt. The saved config (`.mappd/config.json`) means users only answer once. The prompt uses Node's built-in `readline` — no extra dependency. The parser accepts `frameworkOverride` and `entryPointOverride` options that bypass `detectFramework()`.

@@ -4,6 +4,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { WebSocketServer, WebSocket } from 'ws';
 import pc from 'picocolors';
+import { captureOnDemand } from './screenshot.js';
 
 interface ServerOptions {
   port: number;
@@ -59,6 +60,24 @@ export function createServer(options: ServerOptions) {
       res.sendFile(manifestPath);
     } else {
       res.json({});
+    }
+  });
+
+  // On-demand screenshot API — Puppeteer captures a fresh screenshot
+  app.get('/api/screenshot', async (req, res) => {
+    const routePath = (req.query.path as string) || '/';
+    const width = parseInt(req.query.width as string, 10) || 1280;
+    const height = parseInt(req.query.height as string, 10) || 800;
+
+    try {
+      const buffer = await captureOnDemand(targetPort, routePath, { width, height });
+      res.setHeader('Content-Type', 'image/png');
+      res.setHeader('Content-Disposition', `attachment; filename="mappd-${routePath.replace(/\//g, '-').replace(/^-/, '') || 'screen'}.png"`);
+      res.setHeader('Cache-Control', 'no-cache');
+      res.send(buffer);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ error: `Screenshot failed: ${msg}` });
     }
   });
 

@@ -176,10 +176,22 @@ function AppInner() {
           console.warn('[Mappd] State override failed:', e.data.error);
         }
       }
+      if (e.data?.type === 'fc-scroll-height') {
+        const route = e.data.route as string;
+        const height = e.data.scrollHeight as number;
+        // Find the node ID for this route
+        setScrollHeights((prev) => {
+          // Match route to node ID
+          const node = graphData?.baseNodes.find(n => n.data.routePath === route);
+          if (!node) return prev;
+          if (prev[node.id] === height) return prev;
+          return { ...prev, [node.id]: height };
+        });
+      }
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, []);
+  }, [graphData]);
 
   const [config, setConfig] = useState<{ targetPort: number; wsPort: number } | null>(null);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
@@ -194,6 +206,8 @@ function AppInner() {
   const [edgeStyle, setEdgeStyle] = useState<EdgeStyle>('solid');
   const [liveOverrides, setLiveOverrides] = useState<Record<string, boolean>>({});
   const [reloadKeys, setReloadKeys] = useState<Record<string, number>>({});
+  const [hugContent, setHugContent] = useState(false);
+  const [scrollHeights, setScrollHeights] = useState<Record<string, number>>({});
 
   const { zoom } = useViewport();
   const { fitView } = useReactFlow();
@@ -322,11 +336,39 @@ function AppInner() {
     });
   }, [viewportPreset, layoutDirection, nodeHeight]);
 
+  // Auto re-layout when hug content toggles
+  const prevHugRef = useRef(hugContent);
+  useEffect(() => {
+    if (prevHugRef.current === hugContent) return;
+    prevHugRef.current = hugContent;
+    setGraphData((prev) => {
+      if (!prev) return prev;
+      const heights = hugContent ? nodeHeightMap : undefined;
+      const relaid = layoutGraph(prev.baseNodes, prev.edges, layoutDirection, nodeHeight, heights);
+      return { ...prev, baseNodes: relaid };
+    });
+  }, [hugContent, layoutDirection, nodeHeight, nodeHeightMap]);
+
+  // Compute per-node heights for hug content mode
+  const nodeHeightMap = useMemo(() => {
+    if (!hugContent) return undefined;
+    const map: Record<string, number> = {};
+    for (const node of baseNodes) {
+      const sh = scrollHeights[node.id];
+      if (sh) {
+        const baseH = vpDims.height;
+        const cappedH = Math.min(sh, baseH * 3);
+        map[node.id] = Math.round(cappedH * (480 / vpDims.width)) + 30;
+      }
+    }
+    return Object.keys(map).length > 0 ? map : undefined;
+  }, [hugContent, scrollHeights, baseNodes, vpDims]);
+
   const handleReLayout = useCallback(() => {
     if (!graphData) return;
-    const relaid = layoutGraph(graphData.baseNodes, graphData.edges, layoutDirection, nodeHeight);
+    const relaid = layoutGraph(graphData.baseNodes, graphData.edges, layoutDirection, nodeHeight, nodeHeightMap);
     setGraphData((prev) => prev ? { ...prev, baseNodes: relaid } : prev);
-  }, [graphData, layoutDirection, nodeHeight]);
+  }, [graphData, layoutDirection, nodeHeight, nodeHeightMap]);
 
   const handleLayoutDirectionChange = useCallback((dir: LayoutDirection) => {
     setLayoutDirection(dir);
@@ -380,6 +422,8 @@ function AppInner() {
             forceLive: liveOverrides[node.id],
             reloadKey: reloadKeys[node.id] ?? 0,
             hideLabel: !showLabels,
+            hugContent,
+            scrollHeight: scrollHeights[node.id],
             onDoubleClick: handleDoubleClickNode,
             onRequestLoad: handleRequestLoad,
             onIframeLoaded: handleIframeLoaded,
@@ -389,7 +433,7 @@ function AppInner() {
           },
         };
       }),
-    [activeNodeId, baseNodes, screenshots, zoom, devServerUrl, shouldLoad, getPinForNode, hasPinForNode, handleRequestLoad, handleIframeLoaded, handleDoubleClickNode, vpDims, liveOverrides, reloadKeys, showLabels]
+    [activeNodeId, baseNodes, screenshots, zoom, devServerUrl, shouldLoad, getPinForNode, hasPinForNode, handleRequestLoad, handleIframeLoaded, handleDoubleClickNode, vpDims, liveOverrides, reloadKeys, showLabels, hugContent, scrollHeights]
   );
 
   const edges = useMemo(
@@ -530,6 +574,8 @@ function AppInner() {
         onReloadScreen={handleReloadScreen}
         onToggleLive={handleToggleLive}
         liveOverrides={liveOverrides}
+        hugContent={hugContent}
+        onToggleHugContent={() => setHugContent((v) => !v)}
         pinnedState={activeNodeId ? getPinForNode(activeNodeId) : undefined}
         globalAuth={globalAuth}
         onUpdatePin={setPinForNode}

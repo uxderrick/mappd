@@ -20,6 +20,27 @@
 
 <!-- Newest entries at the top -->
 
+### [2026-03-28] State override fix — fiber targeting + dispatch strategy
+**What was done:** Fixed state override so clicking state buttons in the right panel actually changes the iframe's UI. Three root causes identified and fixed: (1) Wrong component targeted — generic hook search found `AuthProvider` instead of `CreateProjectPage`. Fixed by sending the route's `componentName` and matching against `fiber.type.name` in the tree. (2) React 19 `overrideHookState` doesn't trigger re-render — switched to calling `hookState.queue.dispatch(value)` directly, which is the same as calling `setState()` from inside the component. (3) `useReducer` needs action objects — added inference that inspects the current state shape (`{ view: 'overview' }`) and constructs `{ type: 'SET_VIEW', payload: value }` automatically. Also added `useReducer` support by passing `hookType` through the full chain (ControlPanel → App → postMessage → inject script).
+**Why:** State-driven screen detection was half-done — parser detected states but clicking them did nothing visible
+**Trade-offs:** The reducer action inference is heuristic (`SET_<KEY>` pattern) — custom action formats won't work. Acceptable for now since most reducers follow this convention. Could add action format hints to the parser later.
+**Outcome:** useState override works (CreateProjectPage steps, SettingsPage tabs). useReducer override works (AnalyticsPage views). Selected state highlights with lavender border.
+**Related:** mappd-inject.js, ControlPanel.tsx, App.tsx
+
+### [2026-03-28] Figma-style 3-panel layout + deep design polish
+**What was done:** Major UI restructure: (1) 3-panel CSS grid layout — left panel (180px screen list), center (canvas), right panel (220px controls). (2) Left panel with route type icons (Phosphor `Browser`), edge-to-edge active highlight. (3) Right panel restructured — header shows selected route as identity (bold name + component subtitle + icon action bar), node-specific sections (Pin State, States, DevTools) only appear when selected, canvas settings independently collapsible with SVG chevrons and collapsed summaries. (4) Removed per-node DevTools from ScreenNode, moved to right panel via iframe registry. (5) Pin State merged into right panel (was separate PinPanel overlay). (6) Deep Figma polish — sentence case titles, subtler borders (`rgba(255,255,255,0.04)`), taller toggle rows (26px min-height), bigger segmented controls, inline editable zoom %, Phosphor Icons throughout. (7) Light theme toned down (#f5f5f5 → #e4e4e8). (8) Framework label in status bar.
+**Why:** Figma's 3-panel model (layers left, canvas center, properties right) is the gold standard for canvas tools
+**Trade-offs:** Removed the closeable/toggleable right panel (was floating card) in favor of always-visible grid panel. PinPanel.tsx is now dead code. Screen dropdown in right panel replaced by left panel list.
+**Outcome:** Clean, professional canvas tool UI. All controls accessible without mode switching.
+**Related:** ControlPanel.tsx, ScreenListPanel.tsx, StatusBar.tsx, App.css
+
+### [2026-03-27] Interactive CLI fallback — 3-question config prompt
+**What was done:** Enhanced the CLI fallback prompt when auto-detect fails. Added React Router v7 as 4th framework choice. Added dep scanning to pre-highlight detected frameworks with green "(detected)" badge. Entry point validation with 3 retries + shows existing candidates. Smart port detection from package.json scripts (parses `--port`/`-p` flags, knows Vite=5173, Next.js=3000). Saved to `.mappd/config.json` with checkmark confirmation.
+**Why:** Real-world projects don't always match auto-detection patterns
+**Trade-offs:** Uses Node's built-in `readline` — no fancy TUI library. Simpler but less polished than inquirer/prompts. Acceptable since it only runs once per project.
+**Outcome:** 3-question flow: framework → entry point → port. Saves config, never asks again.
+**Related:** cli/src/prompt.ts
+
 ### [2026-03-27] Control Panel v1.1 — 9 display/layout/action features
 **What was done:** Added all v1.1 P2 features to ControlPanel: (1) Canvas theme toggle (dark/light — swaps background, dot, edge, minimap colors via `fc-theme-light` class), (2) Show/hide edges toggle (filters edges array to empty), (3) Show/hide labels toggle (hides node labels + edge labels), (4) Layout direction toggle LR/TB, (5) Re-layout button (runs dagre in-browser via `layoutGraph.ts`), (6) Export as PDF (captures PNG then opens print dialog), (7) Reload screen (increments `reloadKey` to force iframe remount), (8) Live/Thumbnail toggle per node (`forceLive` override), (9) Edge style options — Solid/Dashed/Animated. New UI patterns: segmented controls, pill toggles. Created `lib/layoutGraph.ts` with dagre for client-side re-layout.
 **Why:** Complete the v1.1 control panel feature set

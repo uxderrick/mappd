@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import { createServer } from '../server.js';
 import { startWatcher } from '../watcher.js';
 import { parseAndWriteGraph, parseWithConfig } from '../parse.js';
-import { captureScreenshots } from '../screenshot.js';
+import { captureScreenshots, closeBrowser } from '../screenshot.js';
 import { detectTargetPort } from '../detect-port.js';
 import { loadSavedConfig, promptForConfig } from '../prompt.js';
 import { ensureGitignore } from '../gitignore.js';
@@ -117,11 +117,12 @@ export async function devCommand(options: DevOptions) {
   }
 
   // Graceful shutdown
-  process.on('SIGINT', () => {
+  process.on('SIGINT', async () => {
     console.log('');
     console.log(pc.dim('  Shutting down...'));
     watcher.close();
     server.close();
+    await closeBrowser();
     // Clean up injected files
     if (injection) {
       cleanupInjection(injection);
