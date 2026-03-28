@@ -40,6 +40,9 @@ interface FlowGraphJSON {
     componentFilePath: string;
     isIndex: boolean;
     isDynamic: boolean;
+    isProtected?: boolean;
+    isLazy?: boolean;
+    isClientComponent?: boolean;
     parentLayoutId?: string;
     position: { x: number; y: number };
   }[];
@@ -77,6 +80,9 @@ interface BaseNodeData {
   componentFilePath: string;
   nodeId: string;
   isDynamic: boolean;
+  isProtected?: boolean;
+  isLazy?: boolean;
+  isClientComponent?: boolean;
   [key: string]: unknown;
 }
 
@@ -96,6 +102,9 @@ function adaptGraph(graph: FlowGraphJSON): {
       componentFilePath: n.componentFilePath,
       nodeId: n.id,
       isDynamic: n.isDynamic,
+      isProtected: n.isProtected,
+      isLazy: n.isLazy,
+      isClientComponent: n.isClientComponent,
     },
   }));
 
@@ -198,7 +207,7 @@ function AppInner() {
 
   const { zoom } = useViewport();
   const { fitView } = useReactFlow();
-  const { requestLoad, onLoaded, shouldLoad } = useIframeQueue();
+  const { requestLoad, onLoaded } = useIframeQueue();
   const { globalAuth, setAuth, setPinForNode, clearPinForNode, getPinForNode, hasPinForNode } = usePinnedState();
 
   // DevTools: build route→nodeId map for message attribution
@@ -396,6 +405,9 @@ function AppInner() {
             forceLive: liveOverrides[node.id],
             reloadKey: reloadKeys[node.id] ?? 0,
             hideLabel: !showLabels,
+            isProtected: node.data.isProtected,
+            isLazy: node.data.isLazy,
+            isClientComponent: node.data.isClientComponent,
             onDoubleClick: handleDoubleClickNode,
             onRequestLoad: handleRequestLoad,
             onIframeLoaded: handleIframeLoaded,

@@ -10,6 +10,16 @@ export interface ParsedRoute {
   isOptionalCatchAll?: boolean;
   parentPath?: string;
   children?: ParsedRoute[];
+  /** Whether this route is wrapped in an auth guard */
+  isProtected?: boolean;
+  /** Guard component name (e.g., "ProtectedRoute", "Authenticated") */
+  guardName?: string;
+  /** Whether the route component is lazy-loaded */
+  isLazy?: boolean;
+  /** Whether the component is a client component ('use client') */
+  isClientComponent?: boolean;
+  /** Layout pattern used (Pages Router only) */
+  layoutPattern?: 'getLayout' | 'inline' | 'pageWrapper';
   /** Special Next.js App Router files present at this route segment */
   specialFiles?: {
     loading?: string;
@@ -43,6 +53,14 @@ export interface ScreenNode {
   isDynamic: boolean;
   parentLayoutId?: string;
   position: { x: number; y: number };
+  /** Whether this route is behind an auth guard */
+  isProtected?: boolean;
+  /** Whether the route is lazy-loaded */
+  isLazy?: boolean;
+  /** Whether the component is a client component ('use client') */
+  isClientComponent?: boolean;
+  /** Layout pattern (Pages Router) */
+  layoutPattern?: 'getLayout' | 'inline' | 'pageWrapper';
 }
 
 export interface FlowEdge {
@@ -74,7 +92,7 @@ export interface DetectedStateScreen {
   parentRoutePath: string;
   parentComponentFile: string;
   name: string;
-  hookType: 'useState' | 'useReducer' | 'xstate' | 'zustand';
+  hookType: 'useState' | 'useReducer' | 'xstate' | 'zustand' | 'redux' | 'url';
   hookIndex: number;
   stateValue: string | number | boolean;
   componentName: string;

@@ -21,7 +21,7 @@ interface TrackedUseReducer {
 interface TrackedStateMachine {
   hookIndex: number;
   varName: string;
-  type: 'xstate' | 'zustand';
+  type: 'xstate' | 'zustand' | 'redux' | 'url';
 }
 
 interface ConditionalRender {
@@ -152,6 +152,76 @@ export function detectStateScreens(
         if (varName) {
           stateMachineVars.push({ hookIndex, varName, type: 'zustand' });
           stateVarNames.add(varName);
+        }
+
+        hookIndex++;
+        return;
+      }
+
+      // --- Zustand custom hooks: useXxxStore() or useXxxStore((s) => s.field) ---
+      // Pattern: const value = useUserStore((state) => state.isAuth)
+      // Pattern: const { isAuth, name } = useUserStore()
+      if (
+        t.isIdentifier(callee) &&
+        callee.name.startsWith('use') &&
+        callee.name.endsWith('Store')
+      ) {
+        if (t.isIdentifier(nodePath.node.id)) {
+          // const value = useCountStore(selector)
+          const varName = nodePath.node.id.name;
+          stateMachineVars.push({ hookIndex, varName, type: 'zustand' });
+          stateVarNames.add(varName);
+        } else if (t.isObjectPattern(nodePath.node.id)) {
+          // const { isAuth, count } = useUserStore()
+          for (const prop of nodePath.node.id.properties) {
+            if (t.isObjectProperty(prop) && t.isIdentifier(prop.value)) {
+              stateVarNames.add(prop.value.name);
+            } else if (t.isRestElement(prop) && t.isIdentifier(prop.argument)) {
+              stateVarNames.add(prop.argument.name);
+            }
+          }
+          // Track the first property as the representative var
+          const firstProp = nodePath.node.id.properties[0];
+          if (t.isObjectProperty(firstProp) && t.isIdentifier(firstProp.value)) {
+            stateMachineVars.push({ hookIndex, varName: firstProp.value.name, type: 'zustand' });
+          }
+        }
+
+        hookIndex++;
+        return;
+      }
+
+      // --- Redux: useSelector ---
+      if (t.isIdentifier(callee) && callee.name === 'useSelector') {
+        let varName: string | null = null;
+
+        if (t.isIdentifier(nodePath.node.id)) {
+          varName = nodePath.node.id.name;
+        } else if (t.isObjectPattern(nodePath.node.id)) {
+          // const { theme } = useSelector(...)
+          const firstProp = nodePath.node.id.properties[0];
+          if (t.isObjectProperty(firstProp) && t.isIdentifier(firstProp.value)) {
+            varName = firstProp.value.name;
+          }
+        }
+
+        if (varName) {
+          stateMachineVars.push({ hookIndex, varName, type: 'redux' });
+          stateVarNames.add(varName);
+        }
+
+        hookIndex++;
+        return;
+      }
+
+      // --- useSearchParams (URL state) ---
+      if (t.isIdentifier(callee) && callee.name === 'useSearchParams') {
+        if (t.isArrayPattern(nodePath.node.id)) {
+          const first = nodePath.node.id.elements[0];
+          if (first && t.isIdentifier(first)) {
+            stateVarNames.add(first.name);
+            stateMachineVars.push({ hookIndex, varName: first.name, type: 'url' });
+          }
         }
 
         hookIndex++;

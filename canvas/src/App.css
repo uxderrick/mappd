@@ -167,6 +167,108 @@ html, body, #root {
   flex-shrink: 0;
 }
 
+/* Search */
+.fc-sl-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--fc-border);
+}
+
+.fc-sl-search-icon {
+  color: var(--fc-text-ghost);
+  flex-shrink: 0;
+}
+
+.fc-sl-search-input {
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--fc-text-primary);
+  font-family: var(--fc-font);
+  font-size: 11px;
+  outline: none;
+}
+
+.fc-sl-search-input::placeholder {
+  color: var(--fc-text-ghost);
+}
+
+/* Groups */
+.fc-sl-group {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.fc-sl-group:last-child {
+  border-bottom: none;
+}
+
+.fc-sl-group-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background var(--fc-transition);
+}
+
+.fc-sl-group-header:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.fc-sl-group-chevron {
+  color: var(--fc-text-ghost);
+  transition: transform var(--fc-transition);
+  flex-shrink: 0;
+}
+
+.fc-sl-group-chevron.is-open {
+  transform: rotate(0deg);
+}
+
+.fc-sl-group-chevron:not(.is-open) {
+  transform: rotate(-90deg);
+}
+
+.fc-sl-group-icon {
+  color: var(--fc-text-ghost);
+  flex-shrink: 0;
+}
+
+.fc-sl-group-label {
+  font-family: var(--fc-font);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fc-text-secondary);
+  flex: 1;
+  text-align: left;
+}
+
+.fc-sl-group-count {
+  font-family: var(--fc-font);
+  font-size: 9px;
+  color: var(--fc-text-ghost);
+  background: var(--fc-bg-void);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.fc-sl-group-items {
+  padding-left: 8px;
+}
+
+/* Empty state */
+.fc-sl-empty {
+  padding: 16px 12px;
+  text-align: center;
+  color: var(--fc-text-ghost);
+  font-size: 11px;
+}
+
 .fc-sl-item.is-active .fc-sl-icon {
   color: var(--fc-accent);
 }
@@ -297,6 +399,44 @@ html, body, #root {
   flex-shrink: 0;
   margin-right: 2px;
   box-shadow: 0 0 6px var(--fc-live-dim);
+}
+
+/* Auth guard icon */
+.fc-protected-icon {
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+/* Lazy loading icon */
+.fc-lazy-icon {
+  color: #8b5cf6;
+  flex-shrink: 0;
+}
+
+/* Client component badge */
+.fc-client-badge {
+  font-family: var(--fc-font);
+  font-size: 7px;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  padding: 0px 3px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  letter-spacing: 0.03em;
+}
+
+/* Dynamic route badge */
+.fc-dynamic-badge {
+  font-family: var(--fc-font);
+  font-size: 7px;
+  font-weight: 700;
+  color: var(--fc-pin);
+  background: var(--fc-pin-dim);
+  padding: 0px 3px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  letter-spacing: 0.03em;
 }
 
 /* Screen content — sharp rectangle, Figma-style border */

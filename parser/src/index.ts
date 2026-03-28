@@ -34,6 +34,7 @@ export function parseProject(projectDir: string, options?: ParseOptions): FlowGr
     ? {
         framework: options.frameworkOverride as any,
         entryPoints: [path.resolve(absDir, options.entryPointOverride)],
+        projectRoot: absDir,
       }
     : detectFramework(absDir);
 

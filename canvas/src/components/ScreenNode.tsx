@@ -1,5 +1,6 @@
 import { memo, useRef, useEffect, useState, useCallback } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
+import { Lock, Lightning } from '@phosphor-icons/react';
 import type { ScreenNodeData } from '../types';
 import { sendPinToIframe } from '../lib/pinBridge';
 import { registerIframe, unregisterIframe } from '../lib/iframeRegistry';
@@ -110,6 +111,8 @@ function ScreenNode({ data }: NodeProps<ScreenNodeType>) {
   // Show "double-click to zoom" hint when selected but zoomed out
   const showZoomHint = data.isActive && zoomLevel < 0.6;
 
+  const isDynamic = data.routePath.includes(':') || data.routePath.includes('*');
+
   const showLiveIframe = isLive;
   const showScreenshot = !isLive && data.screenshotUrl && zoomLevel >= 0.5;
   const showPlaceholder = !showLiveIframe && !showScreenshot;
@@ -126,6 +129,10 @@ function ScreenNode({ data }: NodeProps<ScreenNodeType>) {
         <span className={`fc-node-name ${data.isActive ? 'selected' : ''}`}>
           {data.hasPinnedState && <span className="fc-pin-dot" />}
           {isLive && <span className="fc-live-dot" />}
+          {data.isProtected && <Lock size={9} className="fc-protected-icon" weight="fill" />}
+          {data.isLazy && <Lightning size={9} className="fc-lazy-icon" weight="fill" />}
+          {data.isClientComponent && <span className="fc-client-badge">C</span>}
+          {isDynamic && <span className="fc-dynamic-badge">D</span>}
           {data.routePath}
         </span>
         <span className="fc-node-actions">

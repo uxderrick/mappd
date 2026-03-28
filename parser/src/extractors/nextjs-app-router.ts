@@ -2,6 +2,20 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { ParsedRoute } from '../types.js';
 
+/**
+ * Check if a file is a client component (starts with 'use client' directive).
+ */
+function isClientComponent(filePath: string): boolean {
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    // Check first few lines for 'use client' directive
+    const firstLines = content.slice(0, 200);
+    return /['"]use client['"]/.test(firstLines);
+  } catch {
+    return false;
+  }
+}
+
 const PAGE_FILES = ['page.tsx', 'page.ts', 'page.jsx', 'page.js'];
 const LAYOUT_FILES = ['layout.tsx', 'layout.ts', 'layout.jsx', 'layout.js'];
 const ROUTE_FILES = ['route.tsx', 'route.ts', 'route.jsx', 'route.js'];
@@ -99,6 +113,7 @@ function scanDirectory(
           isLayout: false,
           isOptionalCatchAll,
           parentPath: getParentPath(routePath),
+          isClientComponent: isClientComponent(pagePath),
           ...(hasSpecialFiles ? { specialFiles } : {}),
         });
         break;

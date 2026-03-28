@@ -93,29 +93,30 @@ Priorities: `P0` (critical/blocking), `P1` (important), `P2` (nice-to-have), `P3
 
 ### Real-World Parser Improvements (from research — 2026-03-28)
 
-**Phase 1 — Parser routing gaps (do now):**
-- [ ] **Resolve path config indirections** — Detect `paths.app.root.path` config objects and resolve to actual path strings. Bulletproof React pattern. `[P1]` `[added: 2026-03-28]`
-- [ ] **Unwrap lazy loading patterns** — Detect `lazy: () => import(...)` (RR native), `React.lazy(() => import(...))`, and custom wrappers like `dynamicElement()`. Resolve the import path to the component file. `[P1]` `[added: 2026-03-28]`
-- [ ] **Detect re-exported getServerSideProps** — Follow imports when `getServerSideProps` is imported from a utility module, not defined inline. Cal.com pattern. `[P1]` `[added: 2026-03-28]`
-- [ ] **Handle RR v7 `clientLoader`/`clientAction`** — Detect client-side data fetching exports alongside server `loader`/`action`. `[P1]` `[added: 2026-03-28]`
-- [ ] **Handle RR v7 `layout()` and `prefix()` helpers** — `layout()` wraps children with no URL segment, `prefix()` adds URL prefix with no layout. Both in routes.ts. `[P1]` `[added: 2026-03-28]`
-- [ ] **Handle resource routes** — `.ts` files (not `.tsx`) that export only loaders, no default component. Exclude from screen nodes. `[P1]` `[added: 2026-03-28]`
-- [ ] **Handle `_components/` excluded directories** — Underscore prefix on directories opts them out of routing (different from `_layout` pathless routes). `[P1]` `[added: 2026-03-28]`
-- [ ] **Handle three Pages Router layout patterns** — `getLayout` (canonical), inline `<AppLayout>` wrapping, `Component.PageWrapper` (Cal.com custom). `[P2]` `[added: 2026-03-28]`
-- [ ] **Handle intent-based forms** — Multiple submit buttons with `name="intent" value="update|delete"` as different navigation triggers in RR v7 actions. `[P2]` `[added: 2026-03-28]`
-- [ ] **Handle `import.meta.glob` route discovery** — Vite convention-based routing where files matching a glob become routes. `[P3]` `[added: 2026-03-28]`
+**Phase 1 — Parser routing gaps (done):**
+- [x] **Resolve path config indirections** — MemberExpression resolution for `paths.app.root.path` patterns. Extracts meaningful segments as route paths. `[P1]` `[done: 2026-03-28]`
+- [x] **Unwrap lazy loading patterns** — Now handles `lazy: () => import(...).then(convert(...))` (Bulletproof React pattern) and `return import(...).then(...)` in block bodies. `[P1]` `[done: 2026-03-28]`
+- [x] **Detect re-exported getServerSideProps** — Follows `export { getServerSideProps } from '../lib/auth'` to the source file and scans for redirects. `[P1]` `[done: 2026-03-28]`
+- [x] **Handle RR v7 `clientLoader`/`clientAction`** — Already covered by redirect scanning (scans all function bodies in route files, not just named loader/action). `[P1]` `[done: 2026-03-28]`
+- [x] **Handle RR v7 `layout()` and `prefix()` helpers** — Already implemented in `react-router-v7.ts` with `parseLayoutHelper` and `parsePrefixHelper`. `[P1]` `[done: 2026-03-28]`
+- [x] **Handle resource routes** — `.ts`/`.js` files without a default export are now excluded from screen nodes. Also skips `.server.ts` files. `[P1]` `[done: 2026-03-28]`
+- [x] **Handle `_components/` excluded directories** — Skips `_components`, `_utils`, `_lib`, `_shared`, `_helpers`, `_hooks`, `_types`, `__tests__` directories in RR v7 flat routes. Next.js already skips all `_` prefixed dirs. `[P1]` `[done: 2026-03-28]`
+- [x] **Handle three Pages Router layout patterns** — Detects `getLayout` (canonical), inline layout wrapping (AppLayout/DashboardLayout/etc.), and `PageWrapper` (Cal.com) by scanning page file content. `[P2]` `[done: 2026-03-28]`
+- [x] **Handle intent-based forms** — Detects `<button name="intent" value="update|delete">` inside `<Form>` elements. Creates separate edge labels per intent (e.g., "Form (delete): /admin"). `[P2]` `[done: 2026-03-28]`
+- [x] **Handle `import.meta.glob` route discovery** — When no routes found via standard parsing, falls back to scanning for `import.meta.glob(...)` calls, resolves the glob directory, and creates routes from discovered files. `[P3]` `[done: 2026-03-28]`
 
-**Phase 2 — State detection gaps (next):**
-- [ ] **Detect Zustand stores** — `create()`, `persist` middleware, `subscribeWithSelector`. Map store shape to state values. LobeChat has 25 store modules. `[P1]` `[added: 2026-03-28]`
-- [ ] **Detect Redux stores** — `createSlice`, `useSelector`, `useDispatch`. Map selectors to state shapes. `[P1]` `[added: 2026-03-28]`
-- [ ] **Detect URL search params as state** — `useSearchParams()` from react-router, `nuqs` library. Pagination, filters, redirects stored in URL. `[P1]` `[added: 2026-03-28]`
+**Phase 2 — State detection gaps (done):**
+- [x] **Detect Zustand stores** — Detects `useXxxStore()` custom hooks (name ends with 'Store'), destructured results `{ isAuth, count }`, selector patterns. `[P1]` `[done: 2026-03-28]`
+- [x] **Detect Redux stores** — Detects `useSelector()` with identifier or destructured results. Tracks selected values for conditional render detection. `[P1]` `[done: 2026-03-28]`
+- [x] **Detect URL search params as state** — Detects `useSearchParams()` destructured results. Tracks search params variable for conditional render detection. `[P1]` `[done: 2026-03-28]`
 - [ ] **Detect React Query/SWR/tRPC** — Server state cache. Not overridable via hooks but drives UI significantly. At minimum, detect query keys and endpoints. `[P2]` `[added: 2026-03-28]`
 
-**Phase 3 — Canvas UX for large apps (after):**
-- [ ] **Route grouping/filtering** — Real apps have 50+ routes. Need collapsible groups, search, filter by path prefix. `[P2]` `[added: 2026-03-28]`
-- [ ] **Auth flow visualization** — Show which routes are protected, redirect chains, guard components. `[P2]` `[added: 2026-03-28]`
-- [ ] **Lazy loading indicators** — Show which routes are code-split on the canvas. `[P3]` `[added: 2026-03-28]`
-- [ ] **Server vs client component markers** — Next.js App Router: visually distinguish server and client components. `[P3]` `[added: 2026-03-28]`
+**Phase 3 — Canvas UX for large apps:**
+- [x] **Route grouping/filtering** — Left panel groups routes by first path segment with collapsible headers, count badges, and search/filter input. Groups show when 8+ routes, flat list when fewer or searching. `[P2]` `[done: 2026-03-28]`
+- [x] **Dynamic route badge** — ScreenNode shows amber "D" badge next to routes with `:param` or `*` segments. `[P2]` `[done: 2026-03-28]`
+- [x] **Auth flow visualization** — Lock icon (amber, Phosphor `Lock`) on protected routes. Parser detects guard wrappers, canvas renders icon in node label. `[P2]` `[done: 2026-03-28]`
+- [x] **Lazy loading indicators** — Lightning icon (purple, Phosphor `Lightning`) on lazy-loaded routes. `[P3]` `[done: 2026-03-28]`
+- [x] **Server vs client component markers** — "C" badge (blue) on client components. Parser detects `'use client'` directive. `[P3]` `[done: 2026-03-28]`
 
 ### Bugs / Polish
 - [x] **Auto re-layout on viewport change** — Changing viewport (Desktop→Mobile) changes node height, causing nodes to overlap. Auto re-runs dagre layout when viewport preset changes `[P1]` `[done: 2026-03-27]`

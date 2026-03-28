@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import _traverse from '@babel/traverse';
 const traverse = (_traverse as any).default ?? _traverse;
 import * as t from '@babel/types';
@@ -152,6 +154,69 @@ export function extractReactRouterRoutes(entryFile: string): ParsedRoute[] {
     },
   });
 
+  // ── Pass 3: import.meta.glob route discovery ──────────────────────────────
+  // Pattern: const modules = import.meta.glob('../views/**/*.router.tsx', { eager: true })
+  // Then modules are iterated to build route objects
+  if (tree.length === 0) {
+    traverse(ast, {
+      CallExpression(nodePath) {
+        const callee = nodePath.node.callee;
+        // import.meta.glob(...)
+        if (
+          t.isMemberExpression(callee) &&
+          t.isMemberExpression(callee.object) &&
+          t.isMetaProperty(callee.object.object) &&
+          t.isIdentifier(callee.object.property, { name: 'meta' }) &&
+          t.isIdentifier(callee.property, { name: 'glob' })
+        ) {
+          const firstArg = nodePath.node.arguments[0];
+          if (t.isStringLiteral(firstArg)) {
+            const globPattern = firstArg.value;
+            // Resolve the glob relative to the entry file
+            const dir = path.dirname(entryFile);
+            // Extract the base directory from the glob pattern
+            const parts = globPattern.split('/');
+            const baseParts: string[] = [];
+            for (const part of parts) {
+              if (part.includes('*') || part.includes('{')) break;
+              if (part === '..') baseParts.push('..');
+              else if (part !== '.') baseParts.push(part);
+            }
+            const baseDir = path.resolve(dir, baseParts.join('/'));
+
+            // Scan the directory for matching files and create routes from filenames
+            if (fs.existsSync(baseDir)) {
+              const files = scanGlobDir(baseDir, globPattern);
+              for (const file of files) {
+                const relativePath = path.relative(baseDir, file);
+                const routePath = '/' + relativePath
+                  .replace(/\.(tsx|ts|jsx|js)$/, '')
+                  .replace(/\.router$/, '')
+                  .replace(/\/index$/, '')
+                  .replace(/\[(\w+)\]/g, ':$1');
+                const componentName = path.basename(file, path.extname(file))
+                  .replace(/\.router$/, '')
+                  .replace(/[-_.]/g, ' ')
+                  .replace(/\b\w/g, c => c.toUpperCase())
+                  .replace(/\s/g, '');
+
+                tree.push({
+                  path: routePath,
+                  componentName,
+                  componentFilePath: file,
+                  isDynamic: routePath.includes(':'),
+                  isIndex: routePath === '/',
+                  isLayout: false,
+                  isLazy: true,
+                });
+              }
+            }
+          }
+        }
+      },
+    });
+  }
+
   // Flatten the tree into a flat list of all routes
   return flattenRoutes(tree);
 }
@@ -187,6 +252,9 @@ function parseRouteObject(
   let componentName = 'Unknown';
   let componentFilePath = '';
   let isIndex = false;
+  let isLazy = false;
+  let isProtected = false;
+  let guardName: string | undefined;
   let children: ParsedRoute[] = [];
 
   // TODO: extract `caseSensitive` when ParsedRoute supports it
@@ -220,6 +288,12 @@ function parseRouteObject(
         if (resolved) {
           componentName = resolved.name;
           componentFilePath = resolved.filePath;
+          // Detect auth guard wrappers: <ProtectedRoute><Outlet /></ProtectedRoute>
+          const guard = detectGuardWrapper(prop.value);
+          if (guard) {
+            isProtected = true;
+            guardName = guard;
+          }
         }
         break;
       }
@@ -234,6 +308,7 @@ function parseRouteObject(
       }
 
       case 'lazy': {
+        isLazy = true;
         const resolved = resolveLazyImport(prop.value, entryFile);
         if (resolved) {
           componentName = resolved.name;
@@ -264,18 +339,27 @@ function parseRouteObject(
 
   if (!fullPath && !isIndex && !isLayoutWrapper) return null;
 
+  // Propagate guard status to children
+  if (isProtected && children.length > 0) {
+    for (const child of children) {
+      child.isProtected = true;
+      child.guardName = child.guardName ?? guardName;
+    }
+  }
+
   return {
     path: fullPath || parentPath || '/',
     componentName,
     componentFilePath,
-    // GAP FIX #2 — Splat routes: `*` anywhere in the path means dynamic
-    // Also detect optional segments (:param?)
     isDynamic: fullPath.includes(':') || fullPath.includes('*'),
     isIndex,
     isLayout: isLayoutWrapper || children.length > 0,
     isOptionalCatchAll: fullPath.includes('?'),
     parentPath: parentPath || undefined,
     children: children.length > 0 ? children : undefined,
+    isProtected,
+    guardName,
+    isLazy,
   };
 }
 
@@ -439,6 +523,54 @@ function isJSXName(name: t.JSXIdentifier | t.JSXMemberExpression | t.JSXNamespac
   return false;
 }
 
+/**
+ * Detect if a JSX element wraps children in an auth guard component.
+ * Common patterns:
+ *   <ProtectedRoute><Outlet /></ProtectedRoute>
+ *   <Authenticated fallback={...}><ThemedLayout><Outlet /></ThemedLayout></Authenticated>
+ *   <RequireAuth><Outlet /></RequireAuth>
+ */
+const GUARD_NAMES = [
+  'ProtectedRoute', 'PrivateRoute', 'AuthRoute', 'RequireAuth',
+  'Authenticated', 'AuthGuard', 'ProtectedLayout', 'AuthenticatedRoute',
+  'RequireAuthentication', 'WithAuth', 'PrivateLayout',
+];
+
+function detectGuardWrapper(value: t.Node): string | null {
+  if (!t.isJSXElement(value)) return null;
+
+  const opening = value.openingElement;
+  if (!t.isJSXIdentifier(opening.name)) return null;
+
+  const name = opening.name.name;
+
+  // Direct match against known guard names
+  if (GUARD_NAMES.includes(name)) return name;
+
+  // Heuristic: component name contains "protect", "auth", "private", "guard"
+  const lower = name.toLowerCase();
+  if (
+    lower.includes('protect') ||
+    lower.includes('auth') ||
+    lower.includes('private') ||
+    lower.includes('guard') ||
+    lower.includes('require')
+  ) {
+    return name;
+  }
+
+  // Check if this element wraps an <Outlet /> — if so, check one level deeper
+  // e.g., <SomeLayout><ProtectedRoute><Outlet /></ProtectedRoute></SomeLayout>
+  for (const child of value.children) {
+    if (t.isJSXElement(child)) {
+      const innerGuard = detectGuardWrapper(child);
+      if (innerGuard) return innerGuard;
+    }
+  }
+
+  return null;
+}
+
 function resolveElementComponent(
   value: t.Node,
   importMap: Map<string, { source: string; importedName: string; resolvedPath: string | null }>,
@@ -542,4 +674,33 @@ function resolveMemberExpressionPath(node: t.MemberExpression): string | null {
 
   if (meaningful.length === 0) return '/';
   return '/' + meaningful.join('/');
+}
+
+/**
+ * Recursively scan a directory for files matching route extensions.
+ * Used for import.meta.glob resolution.
+ */
+function scanGlobDir(dir: string, _pattern: string): string[] {
+  const results: string[] = [];
+  const EXTS = ['.tsx', '.ts', '.jsx', '.js'];
+
+  function walk(d: string) {
+    if (!fs.existsSync(d)) return;
+    const entries = fs.readdirSync(d, { withFileTypes: true });
+    for (const entry of entries) {
+      const full = path.join(d, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+        walk(full);
+      } else {
+        const ext = path.extname(entry.name);
+        if (EXTS.includes(ext)) {
+          results.push(full);
+        }
+      }
+    }
+  }
+
+  walk(dir);
+  return results;
 }

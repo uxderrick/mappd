@@ -20,6 +20,10 @@ export function buildFlowGraph(
     isDynamic: route.isDynamic,
     parentLayoutId: route.parentPath ? routePathToId(route.parentPath) : undefined,
     position: { x: 0, y: 0 }, // Will be set by layout
+    isProtected: route.isProtected,
+    isLazy: route.isLazy,
+    isClientComponent: route.isClientComponent,
+    layoutPattern: route.layoutPattern,
   }));
 
   // Build a set of valid node route paths for matching

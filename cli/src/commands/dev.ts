@@ -148,16 +148,35 @@ function injectScript(projectDir: string, canvasDir: string): Injection | null {
   const scriptSrc = path.join(canvasDir, 'mappd-inject.js');
   if (!fs.existsSync(scriptSrc)) return null;
 
-  // Step 1: Copy script to public/
-  const publicDirs = ['public', 'static', path.join('app', 'public'), path.join('src', 'public')];
+  // Build list of directories to search — project root + monorepo sub-packages
+  const searchRoots = [projectDir];
+  for (const subDir of ['apps', 'packages']) {
+    const dir = path.join(projectDir, subDir);
+    if (fs.existsSync(dir)) {
+      try {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (entry.isDirectory()) {
+            searchRoots.push(path.join(dir, entry.name));
+          }
+        }
+      } catch {}
+    }
+  }
+
+  // Step 1: Copy script to public/ — search all roots
+  const publicDirNames = ['public', 'static', path.join('app', 'public'), path.join('src', 'public')];
   let publicDir: string | null = null;
 
-  for (const dir of publicDirs) {
-    const fullDir = path.join(projectDir, dir);
-    if (fs.existsSync(fullDir) && fs.statSync(fullDir).isDirectory()) {
-      publicDir = fullDir;
-      break;
+  for (const root of searchRoots) {
+    for (const dir of publicDirNames) {
+      const fullDir = path.join(root, dir);
+      if (fs.existsSync(fullDir) && fs.statSync(fullDir).isDirectory()) {
+        publicDir = fullDir;
+        break;
+      }
     }
+    if (publicDir) break;
   }
 
   if (!publicDir) {
@@ -175,72 +194,71 @@ function injectScript(projectDir: string, canvasDir: string): Injection | null {
     path.join('src', 'index.html'),     // some CRA setups
   ];
 
-  for (const candidate of htmlCandidates) {
-    const htmlPath = path.join(projectDir, candidate);
-    if (!fs.existsSync(htmlPath)) continue;
+  // Search all roots for HTML entry point (Vite/CRA: index.html)
+  for (const root of searchRoots) {
+    for (const candidate of htmlCandidates) {
+      const htmlPath = path.join(root, candidate);
+      if (!fs.existsSync(htmlPath)) continue;
 
-    const original = fs.readFileSync(htmlPath, 'utf-8');
-    if (original.includes('mappd-inject.js')) {
-      // Already injected (e.g., from a previous run that didn't clean up)
-      console.log(pc.dim(`  Script already in ${candidate}`));
+      const original = fs.readFileSync(htmlPath, 'utf-8');
+      if (original.includes('mappd-inject.js')) {
+        console.log(pc.dim(`  Script already in ${path.relative(projectDir, htmlPath)}`));
+        return { scriptPath: scriptDst, htmlPath, htmlBackup: original };
+      }
+
+      let modified: string;
+      if (original.includes('</head>')) {
+        modified = original.replace('</head>', `  ${SCRIPT_TAG}\n  </head>`);
+      } else if (original.includes('<body>')) {
+        modified = original.replace('<body>', `<body>\n  ${SCRIPT_TAG}`);
+      } else {
+        modified = SCRIPT_TAG + '\n' + original;
+      }
+
+      fs.writeFileSync(htmlPath, modified, 'utf-8');
+      console.log(pc.dim(`  Injected script tag into ${path.relative(projectDir, htmlPath)}`));
       return { scriptPath: scriptDst, htmlPath, htmlBackup: original };
     }
-
-    // Inject before </head> — must load before app JS
-    let modified: string;
-    if (original.includes('</head>')) {
-      modified = original.replace('</head>', `  ${SCRIPT_TAG}\n  </head>`);
-    } else if (original.includes('<body>')) {
-      modified = original.replace('<body>', `<body>\n  ${SCRIPT_TAG}`);
-    } else {
-      modified = SCRIPT_TAG + '\n' + original;
-    }
-
-    fs.writeFileSync(htmlPath, modified, 'utf-8');
-    console.log(pc.dim(`  Injected script tag into ${candidate}`));
-    return { scriptPath: scriptDst, htmlPath, htmlBackup: original };
   }
 
-  // Next.js: inject into app/layout.tsx or pages/_document.tsx
-  const nextCandidates = [
-    { file: path.join('app', 'layout.tsx'), tag: 'head' },
-    { file: path.join('app', 'layout.jsx'), tag: 'head' },
-    { file: path.join('app', 'layout.ts'), tag: 'head' },
-    { file: path.join('app', 'layout.js'), tag: 'head' },
-    { file: path.join('src', 'app', 'layout.tsx'), tag: 'head' },
-    { file: path.join('src', 'app', 'layout.jsx'), tag: 'head' },
+  // Search all roots for Next.js layout files
+  const nextLayoutFiles = [
+    path.join('app', 'layout.tsx'),
+    path.join('app', 'layout.jsx'),
+    path.join('app', 'layout.ts'),
+    path.join('app', 'layout.js'),
+    path.join('src', 'app', 'layout.tsx'),
+    path.join('src', 'app', 'layout.jsx'),
   ];
 
-  for (const { file, tag } of nextCandidates) {
-    const layoutPath = path.join(projectDir, file);
-    if (!fs.existsSync(layoutPath)) continue;
+  for (const root of searchRoots) {
+    for (const file of nextLayoutFiles) {
+      const layoutPath = path.join(root, file);
+      if (!fs.existsSync(layoutPath)) continue;
 
-    const original = fs.readFileSync(layoutPath, 'utf-8');
-    if (original.includes('mappd-inject.js')) {
-      console.log(pc.dim(`  Script already in ${file}`));
+      const original = fs.readFileSync(layoutPath, 'utf-8');
+      if (original.includes('mappd-inject.js')) {
+        console.log(pc.dim(`  Script already in ${path.relative(projectDir, layoutPath)}`));
+        return { scriptPath: scriptDst, htmlPath: layoutPath, htmlBackup: original };
+      }
+
+      let modified: string;
+      const headMatch = original.match(/<head[^>]*>/i);
+      if (headMatch) {
+        modified = original.replace(headMatch[0], `${headMatch[0]}\n        <script src="/mappd-inject.js"></script>`);
+      } else if (original.includes('<html')) {
+        modified = original.replace(
+          /(<html[^>]*>)/i,
+          `$1\n      <head>\n        <script src="/mappd-inject.js" defer></script>\n      </head>`
+        );
+      } else {
+        continue;
+      }
+
+      fs.writeFileSync(layoutPath, modified, 'utf-8');
+      console.log(pc.dim(`  Injected script tag into ${path.relative(projectDir, layoutPath)}`));
       return { scriptPath: scriptDst, htmlPath: layoutPath, htmlBackup: original };
     }
-
-    let modified: string;
-    const headMatch = original.match(/<head[^>]*>/i);
-    if (headMatch) {
-      // Has <head> tag — inject inside it
-      modified = original.replace(headMatch[0], `${headMatch[0]}\n        <script src="/mappd-inject.js"></script>`);
-    } else if (original.includes('<html')) {
-      // Next.js App Router: no <head> tag, add one inside <html>
-      // Insert <head> with script right after <html ...>
-      modified = original.replace(
-        /(<html[^>]*>)/i,
-        `$1\n      <head>\n        <script src="/mappd-inject.js" defer></script>\n      </head>`
-      );
-    } else {
-      // Can't find insertion point — skip
-      continue;
-    }
-
-    fs.writeFileSync(layoutPath, modified, 'utf-8');
-    console.log(pc.dim(`  Injected script tag into ${file}`));
-    return { scriptPath: scriptDst, htmlPath: layoutPath, htmlBackup: original };
   }
 
   console.log(pc.dim(`  Copied mappd-inject.js to public/ (add <script src="/mappd-inject.js"></script> to your HTML manually)`));

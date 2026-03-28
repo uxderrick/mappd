@@ -28,6 +28,9 @@ export interface ScreenNodeData {
   hugContent?: boolean;
   scrollHeight?: number;
   hideLabel?: boolean;
+  isProtected?: boolean;
+  isLazy?: boolean;
+  isClientComponent?: boolean;
   onDoubleClick?: (nodeId: string) => void;
   onRequestLoad?: (nodeId: string) => void;
   onIframeLoaded?: (nodeId: string) => void;

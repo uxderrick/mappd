@@ -19,7 +19,7 @@ mappd dev
 
 That's it. Mappd parses your routes, starts a canvas server, and opens your entire app on one screen.
 
-Your app's dev server should already be running (default: port 5173).
+Your app's dev server should already be running. Mappd auto-detects the port from your project config (Vite, Next.js, etc.).
 
 ---
 
@@ -38,9 +38,10 @@ Your app's dev server should already be running (default: port 5173).
 
 | Framework | Status |
 |-----------|--------|
-| React Router v6+ | Supported |
+| React Router v6 | Supported |
+| React Router v7 (framework + SPA mode) | Supported |
 | Next.js App Router | Supported |
-| React Router v7 (file-based) | Planned |
+| Next.js Pages Router | Supported |
 | Vue / Svelte / Angular | Future |
 
 ---
@@ -57,14 +58,14 @@ mappd dev [options]
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `-p, --port <port>` | Canvas server port | `4200` |
-| `-t, --target-port <port>` | Your app's dev server port | `5173` |
+| `-p, --port <port>` | Canvas server port | `3569` |
+| `-t, --target-port <port>` | Your app's dev server port | Auto-detected |
 | `-d, --dir <path>` | Project directory | `.` |
 
 **Examples:**
 
 ```bash
-# Default: canvas on :4200, app on :5173
+# Default: canvas on :3569, app port auto-detected
 mappd dev
 
 # Custom ports
@@ -78,7 +79,9 @@ mappd dev --dir ./packages/web
 
 ## How It Works
 
-Mappd uses Babel-based AST analysis to statically parse your routing configuration and detect navigation patterns (`<Link>`, `useNavigate()`, `router.push()`). It builds a directed graph of your app's screens and connections, then renders each route as a live iframe on a React Flow canvas. A lightweight script injected into each iframe intercepts navigation events via `postMessage`, so clicking a link pans the canvas instead of navigating away. A file watcher monitors your source code and pushes graph updates over WebSocket in real-time.
+Mappd uses Babel-based AST analysis to statically parse your routing configuration and detect navigation patterns (`<Link>`, `useNavigate()`, `router.push()`, `redirect()`). It supports both code-based routing (React Router JSX/config) and file-based routing (Next.js `app/` and `pages/` directories). It builds a directed graph of your app's screens and connections, then renders each route as a live iframe on a React Flow canvas. A lightweight script injected into each iframe intercepts navigation events via `postMessage`, so clicking a link pans the canvas instead of navigating away. A file watcher monitors your source code and pushes graph updates over WebSocket in real-time.
+
+When auto-detection fails (no recognized router in `package.json`), Mappd falls back to an interactive prompt that asks for framework and entry point, then saves the config to `.mappd/config.json` so you only answer once.
 
 ---
 
@@ -89,8 +92,9 @@ Mappd is designed to work with zero configuration. The CLI flags above cover mos
 Project-specific data is stored in a `.mappd/` directory in your project root. This is created automatically and contains:
 
 - `flow-graph.json` -- the parsed route graph
-- `pins.json` -- pinned state for screen nodes (auth context, URL params, props)
-- Screenshot thumbnails
+- `config.json` -- saved framework/entry point config (so you only configure once)
+- `screenshots/` -- captured screenshot thumbnails
+- `screenshots.json` -- screenshot manifest
 
 You can commit `.mappd/` to your repo or add it to `.gitignore`. Your call.
 

@@ -2,6 +2,35 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { ParsedRoute } from '../types.js';
 
+/**
+ * Detect the layout pattern used in a Pages Router page file.
+ * Returns 'getLayout' | 'inline' | 'pageWrapper' | undefined.
+ */
+function detectLayoutPattern(filePath: string): ParsedRoute['layoutPattern'] {
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    // Check for getLayout pattern: Page.getLayout = ...
+    if (content.includes('.getLayout') || content.includes('getLayout:')) {
+      return 'getLayout';
+    }
+    // Check for PageWrapper pattern: Page.PageWrapper = ... (Cal.com)
+    if (content.includes('.PageWrapper') || content.includes('PageWrapper:')) {
+      return 'pageWrapper';
+    }
+    // Check for inline layout wrapping: common layout component imports
+    if (
+      content.includes('AppLayout') ||
+      content.includes('DashboardLayout') ||
+      content.includes('MainLayout') ||
+      content.includes('SiteLayout') ||
+      content.includes('AdminLayout')
+    ) {
+      return 'inline';
+    }
+  } catch { /* skip */ }
+  return undefined;
+}
+
 const DEFAULT_EXTENSIONS = ['.tsx', '.ts', '.jsx', '.js'];
 const SKIP_FILES = ['_app', '_document', '_error', '404', '500'];
 
@@ -66,6 +95,7 @@ function scanDirectory(
       isIndex: baseName === 'index',
       isLayout: false,
       parentPath: getParentPath(fileRoutePath),
+      layoutPattern: detectLayoutPattern(fullPath),
     });
   }
 }

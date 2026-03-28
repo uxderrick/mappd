@@ -147,15 +147,31 @@ export function detectLinks(
         const formTargetPath = normalizePath(rawFormTarget, routePath);
         if (!formTargetPath) return;
 
-        links.push({
-          sourceFilePath: filePath,
-          sourceRoutePath: routePath,
-          sourceLine: nodePath.node.loc?.start.line ?? 0,
-          sourceColumn: nodePath.node.loc?.start.column ?? 0,
-          triggerType: 'programmatic',
-          targetPath: formTargetPath,
-          labelHint: `Form: ${formTargetPath}`,
-        });
+        // Detect intent-based forms: buttons with name="intent" value="update|delete"
+        const intents = extractFormIntents(nodePath.node);
+        if (intents.length > 0) {
+          for (const intent of intents) {
+            links.push({
+              sourceFilePath: filePath,
+              sourceRoutePath: routePath,
+              sourceLine: nodePath.node.loc?.start.line ?? 0,
+              sourceColumn: nodePath.node.loc?.start.column ?? 0,
+              triggerType: 'programmatic',
+              targetPath: formTargetPath,
+              labelHint: `Form (${intent}): ${formTargetPath}`,
+            });
+          }
+        } else {
+          links.push({
+            sourceFilePath: filePath,
+            sourceRoutePath: routePath,
+            sourceLine: nodePath.node.loc?.start.line ?? 0,
+            sourceColumn: nodePath.node.loc?.start.column ?? 0,
+            triggerType: 'programmatic',
+            targetPath: formTargetPath,
+            labelHint: `Form: ${formTargetPath}`,
+          });
+        }
         return;
       }
 
@@ -769,4 +785,50 @@ function extractJSXText(element: t.JSXElement): string | null {
     }
   }
   return texts.length > 0 ? texts.join(' ') : null;
+}
+
+/**
+ * Extract intent values from a Form's children.
+ * Looks for: <button name="intent" value="update" /> or <button name="_action" value="delete" />
+ */
+function extractFormIntents(formElement: t.JSXElement): string[] {
+  const intents: string[] = [];
+
+  function walkChildren(children: t.JSXElement['children']) {
+    for (const child of children) {
+      if (!t.isJSXElement(child)) continue;
+      const opening = child.openingElement;
+      if (!t.isJSXIdentifier(opening.name)) continue;
+
+      if (opening.name.name === 'button' || opening.name.name === 'input') {
+        // Check for name="intent" or name="_action"
+        const nameAttr = opening.attributes.find(
+          (a): a is t.JSXAttribute =>
+            t.isJSXAttribute(a) &&
+            t.isJSXIdentifier(a.name) &&
+            (a.name.name === 'name') &&
+            t.isStringLiteral(a.value) &&
+            (a.value.value === 'intent' || a.value.value === '_action' || a.value.value === 'action')
+        );
+        if (nameAttr) {
+          const valueAttr = opening.attributes.find(
+            (a): a is t.JSXAttribute =>
+              t.isJSXAttribute(a) &&
+              t.isJSXIdentifier(a.name) &&
+              a.name.name === 'value' &&
+              t.isStringLiteral(a.value)
+          );
+          if (valueAttr && t.isStringLiteral(valueAttr.value)) {
+            intents.push(valueAttr.value.value);
+          }
+        }
+      }
+
+      // Recurse into children (buttons might be nested in divs)
+      if (child.children) walkChildren(child.children);
+    }
+  }
+
+  walkChildren(formElement.children);
+  return intents;
 }
