@@ -11,6 +11,7 @@ import Settings from './pages/Settings'
 import UserDetail from './pages/UserDetail'
 import AdminLayout from './pages/AdminLayout'
 import AdminUsers from './pages/AdminUsers'
+import ActivityFeed from './pages/ActivityFeed'
 import NotFound from './pages/NotFound'
 
 const router = createBrowserRouter([
@@ -23,6 +24,7 @@ const router = createBrowserRouter([
       { index: true, element: <Dashboard /> },
       { path: 'settings', element: <Settings /> },
       { path: 'users/:id', element: <UserDetail /> },
+      { path: 'activity', element: <ActivityFeed /> },
     ],
   },
   {

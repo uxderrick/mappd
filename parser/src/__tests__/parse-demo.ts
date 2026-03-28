@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { parseProject, parseAndWrite } from '../index.js';
 
-const DEMO_APP_DIR = path.resolve(import.meta.dirname, '../../../demo-react-router-v6');
+const DEMO_APP_DIR = path.resolve(import.meta.dirname, '../../../demos/test/demo-react-router-v6');
 
 console.log('Parsing demo-react-router-v6 at:', DEMO_APP_DIR);
 console.log('---');
