@@ -1885,6 +1885,12 @@ html, body, #root {
   background: var(--fc-accent-dim);
 }
 
+.fc-cp-state-btn.is-active {
+  background: var(--fc-accent-dim);
+  border-color: var(--fc-accent);
+  box-shadow: 0 0 0 1px var(--fc-accent-dim);
+}
+
 .fc-cp-state-name {
   font-family: var(--fc-font);
   font-size: 11px;

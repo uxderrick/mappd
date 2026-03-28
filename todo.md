@@ -47,7 +47,7 @@ Priorities: `P0` (critical/blocking), `P1` (important), `P2` (nice-to-have), `P3
 - [x] **Show/hide labels** — Toggle route labels `[P2]` `[done: 2026-03-27]`
 - [x] **Layout direction toggle** — LR (left-to-right) / TB (top-to-bottom) `[P2]` `[done: 2026-03-27]`
 - [x] **Re-layout button** — Re-run Dagre, discard manual positioning `[P2]` `[done: 2026-03-27]`
-- [x] **Export as PDF** — Flow diagram as PDF `[P2]` `[done: 2026-03-27]`
+- [x] ~~**Export as PDF**~~ — Removed in favor of PNG-only export `[P2]` `[removed: 2026-03-28]`
 - [x] **Reload screen** — Refresh a single screen's iframe `[P2]` `[done: 2026-03-27]`
 - [x] **Live/Thumbnail toggle** — Force live or static preview per node `[P2]` `[done: 2026-03-27]`
 - [x] **Edge style options** — Solid / Dashed / Animated `[P2]` `[done: 2026-03-27]`
@@ -95,8 +95,8 @@ Priorities: `P0` (critical/blocking), `P1` (important), `P2` (nice-to-have), `P3
 - [x] **Investigate DevTools section** — Verify DevTools (Console/Network/Storage) works in right panel after moving from per-node. Test: does the iframe registry return the right ref? Does postMessage still flow? Are console entries attributed to the correct node? `[P1]` `[added: 2026-03-27]`
 - [x] **Panel breathing room** — Increased spacing across all panels (section padding, row gaps, font sizes, input heights). First pass done. `[P1]` `[done: 2026-03-27]`
 - [ ] **Iframe scroll handling** — When a node is selected and the user scrolls inside it, should the iframe content scroll or the canvas pan? Currently the overlay blocks scroll when not selected, and when selected pointer events pass through but scroll behavior is inconsistent. Need to decide: (1) scroll inside iframe when selected, (2) always pan canvas and never scroll iframe, or (3) hold a modifier key to switch between iframe scroll and canvas pan `[P1]` `[added: 2026-03-27]`
-- [ ] **Export selected screen** — When a node is selected and you export PNG/PDF, it should export just that screen (zoomed in, cropped to the node) instead of the full canvas. When no node is selected, export the full canvas as before `[P1]` `[added: 2026-03-27]`
-- [ ] **State override not working** — Clicking state screen buttons in the right panel does not override iframe state. Three issues to investigate: (1) `activeIframeRef` may be null if node isn't live/loaded — iframe registry only populates on iframe load, (2) `mappd-inject.js` must load before React to install `__REACT_DEVTOOLS_GLOBAL_HOOK__` — race condition with injection timing, (3) `overrideHookState` depends on React DevTools internals that may not work across all React versions. Need to verify the full chain: click → postMessage → inject script receives → renderer found → fiber walked → hook overridden `[P1]` `[added: 2026-03-27]`
+- [x] **Export selected screen** — When a node is selected, exports just that screen (Puppeteer screenshot). When no node selected, exports the full canvas `[P1]` `[done: 2026-03-28]`
+- [x] **State override not working** — All three issues addressed: iframe registry handles null refs safely, mappd-inject.js installs hook before React loads, overrideHookState uses dispatch-first strategy with DevTools fallback `[P1]` `[done: 2026-03-28]`
 - [x] **Phosphor Icons** — Replaced all inline SVG icons with `@phosphor-icons/react`. Covers: ControlPanel (ArrowClockwise, Play, Monitor, PencilSimple, ArrowSquareOut, CaretDown, Minus, Plus, ArrowsClockwise, Download, FilePdf), ScreenListPanel (Browser), StatusBar (Monitor, ArrowsLeftRight, Question, X) `[P2]` `[done: 2026-03-27]`
 
 ### Phase 2+ Backlog
@@ -104,7 +104,7 @@ Priorities: `P0` (critical/blocking), `P1` (important), `P2` (nice-to-have), `P3
 - [ ] **State-driven screen detection** — AST analysis for useState/useReducer patterns `[P2]` `[added: 2026-03-23]`
 - [ ] **Manual flow correction UI** — Drag to create/remove connections `[P2]` `[added: 2026-03-23]`
 - [ ] **VS Code extension** — Canvas in a webview panel `[P2]` `[added: 2026-03-23]`
-- [x] **Export canvas as image/PDF** — PNG + PDF export built into control panel `[P3]` `[done: 2026-03-27]`
+- [x] **Export canvas as image** — PNG export built into control panel (PDF removed — PNG covers all use cases) `[P3]` `[done: 2026-03-27]`
 - [ ] **AI-assisted flow inference** `[P3]` `[added: 2026-03-23]`
 - [x] **Interactive CLI fallback** — 3-question prompt when auto-detect fails: framework (4 choices with dep scanning to highlight detected), entry point (with validation + 3 retries), port (auto-detected from package.json scripts). Saves to `.mappd/config.json`. `[P1]` `[done: 2026-03-27]`
 

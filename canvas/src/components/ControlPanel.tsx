@@ -69,7 +69,7 @@ interface ControlPanelProps {
   activeIframeRef: React.RefObject<HTMLIFrameElement | null>;
   // State screens
   stateScreens?: StateScreenInfo[];
-  onOverrideState?: (hookIndex: number, value: string | number | boolean | Record<string, unknown>, componentName?: string) => void;
+  onOverrideState?: (hookIndex: number, value: string | number | boolean | Record<string, unknown>, componentName?: string, hookType?: string) => void;
 }
 
 export default function ControlPanel({
@@ -109,6 +109,7 @@ export default function ControlPanel({
   const { zoom } = useViewport();
   const [editingZoom, setEditingZoom] = useState(false);
   const [zoomInput, setZoomInput] = useState('');
+  const [activeStateIndex, setActiveStateIndex] = useState<number | null>(null);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     pinState: true,
     zoom: true,
@@ -135,6 +136,7 @@ export default function ControlPanel({
 
   useEffect(() => {
     setUrlParams(pinnedState?.urlParams ?? {});
+    setActiveStateIndex(null);
   }, [activeNodeId, pinnedState]);
 
   useEffect(() => {
@@ -186,13 +188,7 @@ export default function ControlPanel({
     }
   }, [activeNodeId, routes, devServerUrl]);
 
-  // Find the DOM element for the selected node (if any)
-  const getSelectedNodeElement = useCallback((): HTMLElement | null => {
-    if (!activeNodeId) return null;
-    // React Flow renders nodes with data-id attribute
-    const nodeEl = document.querySelector(`[data-id="${activeNodeId}"]`) as HTMLElement;
-    return nodeEl;
-  }, [activeNodeId]);
+
 
   const canvasFilter = (node: HTMLElement) => {
     const classes = node.classList?.toString() ?? '';
@@ -394,8 +390,8 @@ export default function ControlPanel({
                   {stateScreens.map((s, i) => (
                     <button
                       key={i}
-                      className="fc-cp-state-btn"
-                      onClick={() => onOverrideState?.(s.hookIndex, s.stateValue, s.componentName)}
+                      className={`fc-cp-state-btn ${activeStateIndex === i ? 'is-active' : ''}`}
+                      onClick={() => { setActiveStateIndex(i); onOverrideState?.(s.hookIndex, s.stateValue, s.componentName, s.hookType); }}
                       title={`Set ${s.hookType} hook #${s.hookIndex} to ${JSON.stringify(s.stateValue)}`}
                     >
                       <span className="fc-cp-state-name">{s.name}</span>

@@ -547,18 +547,18 @@ function AppInner() {
             return activeNode && s.parentRoutePath === activeNode.data.routePath;
           }
         ) : []}
-        onOverrideState={(hookIndex, value, _componentName) => {
+        onOverrideState={(hookIndex, value, _componentName, hookType) => {
           const iframe = activeNodeId ? getIframe(activeNodeId) : null;
-          // Use the active node's componentName (from the route), not the stateScreen's componentName (which is the rendered element like "div")
           const activeNode = baseNodes.find(n => n.id === activeNodeId);
           const realComponentName = activeNode?.data.componentName;
           if (iframe) {
-            console.log('[Mappd] Sending state override:', { hookIndex, value, componentName: realComponentName, nodeId: activeNodeId });
+            console.log('[Mappd] Sending state override:', { hookIndex, value, hookType, componentName: realComponentName, nodeId: activeNodeId });
             iframe.contentWindow?.postMessage({
               type: 'fc-override-state',
               hookIndex,
               value,
               componentName: realComponentName,
+              hookType,
             }, '*');
           } else {
             console.warn('[Mappd] No iframe found for active node:', activeNodeId);

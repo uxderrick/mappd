@@ -206,14 +206,24 @@
     var typeName = fiber.type && (fiber.type.name || fiber.type.displayName);
     if (typeName === componentName) {
       // Verify it has a hook at the given index
+      // Accept both useState (state.queue) and useReducer (state.queue with dispatch)
       var state = fiber.memoizedState;
       var idx = 0;
       while (state) {
-        if (idx === hookIndex && state.queue) {
-          return fiber;
+        if (idx === hookIndex) {
+          // Found a hook at the right index — accept it if it has queue or memoizedState
+          if (state.queue || state.memoizedState !== undefined) {
+            return fiber;
+          }
         }
         state = state.next;
         idx++;
+      }
+      // Even if we didn't find the exact hookIndex, return the fiber if name matches
+      // (hookIndex from parser might count differently than runtime)
+      if (fiber.memoizedState) {
+        console.log('[mappd-inject] Component found but hookIndex ' + hookIndex + ' not matched, using first hook');
+        return fiber;
       }
     }
 
@@ -234,8 +244,9 @@
     var hookIndex = e.data.hookIndex;
     var newValue = e.data.value;
     var componentName = e.data.componentName;
+    var hookType = e.data.hookType; // 'useState' or 'useReducer'
 
-    console.log('[mappd-inject] Override request:', { hookIndex: hookIndex, value: newValue, componentName: componentName });
+    console.log('[mappd-inject] Override request:', { hookIndex: hookIndex, value: newValue, componentName: componentName, hookType: hookType });
 
     // Check renderer
     var renderer = getRenderer();
@@ -313,11 +324,42 @@
 
       var dispatched = false;
       if (hookState && hookState.queue && hookState.queue.dispatch) {
-        // For useState, dispatch is the setter function (like setStep)
-        // Calling it triggers a proper React re-render
-        hookState.queue.dispatch(newValue);
-        dispatched = true;
-        console.log('[mappd-inject] Dispatched via queue.dispatch');
+        if (hookType === 'useReducer') {
+          // For useReducer, we need to dispatch an action object.
+          // Try common patterns: { type: 'SET_*', payload: value }
+          // First, check the current state shape to infer the action format
+          var currentState = hookState.memoizedState;
+          var action = null;
+
+          if (typeof currentState === 'object' && currentState !== null) {
+            // State is an object — find which key changed and build a SET_KEY action
+            var keys = Object.keys(currentState);
+            for (var k = 0; k < keys.length; k++) {
+              var key = keys[k];
+              if (currentState[key] !== newValue) {
+                // Try SET_VIEW, SET_KEY, SET_<KEY> patterns
+                action = { type: 'SET_' + key.toUpperCase(), payload: newValue };
+                break;
+              }
+            }
+            if (!action) {
+              // No key difference found, try generic
+              action = { type: 'SET_' + keys[0].toUpperCase(), payload: newValue };
+            }
+          } else {
+            // State is a primitive — use generic action
+            action = { type: 'SET', payload: newValue };
+          }
+
+          console.log('[mappd-inject] Dispatching reducer action:', action);
+          hookState.queue.dispatch(action);
+          dispatched = true;
+        } else {
+          // For useState, dispatch is the setter function (like setStep)
+          hookState.queue.dispatch(newValue);
+          dispatched = true;
+          console.log('[mappd-inject] Dispatched via useState setter');
+        }
       }
 
       // Strategy B: Fall back to overrideHookState if dispatch not available

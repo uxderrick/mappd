@@ -39,7 +39,16 @@ export function createServer(options: ServerOptions) {
   });
 
   // Serve screenshots from .mappd/screenshots/
-  app.use('/screenshots', express.static(path.join(flowGraphDir, 'screenshots')));
+  app.get('/screenshots/:filename', (req, res) => {
+    const screenshotPath = path.join(flowGraphDir, 'screenshots', req.params.filename);
+    if (fs.existsSync(screenshotPath)) {
+      res.setHeader('Content-Type', 'image/png');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.sendFile(path.resolve(screenshotPath));
+    } else {
+      res.status(404).send('Screenshot not found');
+    }
+  });
 
   // Serve screenshots manifest
   app.get('/screenshots.json', (_req, res) => {
