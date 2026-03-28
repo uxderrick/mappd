@@ -50,9 +50,21 @@ export function parseProject(projectDir: string, options?: ParseOptions): FlowGr
 
   switch (detection.framework) {
     case 'react-router': {
-      const allRoutes = detection.entryPoints.flatMap((entry) =>
+      let allRoutes = detection.entryPoints.flatMap((entry) =>
         extractReactRouterRoutes(entry)
       );
+
+      // If entry points yielded 0 routes, deep-scan all .tsx/.jsx files for <Routes> blocks
+      if (allRoutes.length === 0) {
+        const deepFiles = deepScanForRouteFiles(absDir);
+        for (const file of deepFiles) {
+          const found = extractReactRouterRoutes(file);
+          if (found.length > 0) {
+            allRoutes.push(...found);
+          }
+        }
+      }
+
       const allLinks = allRoutes.flatMap((route) => {
         if (!route.componentFilePath) return [];
         return detectLinks(route.componentFilePath, route.path, routeHelpers);
@@ -549,6 +561,62 @@ function normalizeTrailingSlash(routePath: string, trailingSlash: boolean): stri
   if (!trailingSlash) return routePath;
   if (routePath === '/') return routePath;
   return routePath.endsWith('/') ? routePath : routePath + '/';
+}
+
+/**
+ * Deep scan: find all .tsx/.jsx files that contain <Routes> or createBrowserRouter.
+ * Used as fallback when entry point scanning finds 0 routes.
+ */
+function deepScanForRouteFiles(projectDir: string): string[] {
+  const results: string[] = [];
+  const srcDirs = [
+    path.join(projectDir, 'src'),
+    path.join(projectDir, 'app'),
+    path.join(projectDir, 'components'),
+    path.join(projectDir, 'src', 'components'),
+    path.join(projectDir, 'src', 'pages'),
+    path.join(projectDir, 'src', 'app'),
+  ];
+
+  for (const dir of srcDirs) {
+    if (!fs.existsSync(dir)) continue;
+    scanDirForRoutePatterns(dir, results);
+  }
+
+  return results;
+}
+
+function scanDirForRoutePatterns(dir: string, results: string[]): void {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      if (entry.name === 'node_modules' || entry.name === '.next' || entry.name === 'dist' || entry.name === '__tests__') continue;
+      scanDirForRoutePatterns(fullPath, results);
+      continue;
+    }
+
+    const ext = path.extname(entry.name);
+    if (!['.tsx', '.jsx', '.ts', '.js'].includes(ext)) continue;
+
+    try {
+      const content = fs.readFileSync(fullPath, 'utf-8');
+      // Quick string check before expensive AST parse
+      if (
+        content.includes('<Routes') ||
+        content.includes('<Route ') ||
+        content.includes('createBrowserRouter') ||
+        content.includes('createHashRouter') ||
+        content.includes('useRoutes')
+      ) {
+        results.push(fullPath);
+      }
+    } catch {
+      // Skip unreadable files
+    }
+  }
 }
 
 /**

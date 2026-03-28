@@ -180,7 +180,6 @@ function AppInner() {
   const [edgeStyle, setEdgeStyle] = useState<EdgeStyle>('solid');
   const [liveOverrides, setLiveOverrides] = useState<Record<string, boolean>>({});
   const [reloadKeys, setReloadKeys] = useState<Record<string, number>>({});
-  const [hugContent, setHugContent] = useState(false);
 
   // Listen for state override results from iframes
   useEffect(() => {
@@ -397,7 +396,6 @@ function AppInner() {
             forceLive: liveOverrides[node.id],
             reloadKey: reloadKeys[node.id] ?? 0,
             hideLabel: !showLabels,
-            hugContent,
             onDoubleClick: handleDoubleClickNode,
             onRequestLoad: handleRequestLoad,
             onIframeLoaded: handleIframeLoaded,
@@ -407,7 +405,7 @@ function AppInner() {
           },
         };
       }),
-    [activeNodeId, baseNodes, screenshots, zoomAboveThreshold, devServerUrl, getPinForNode, hasPinForNode, handleRequestLoad, handleIframeLoaded, handleDoubleClickNode, vpDims, liveOverrides, reloadKeys, showLabels, hugContent]
+    [activeNodeId, baseNodes, screenshots, zoomAboveThreshold, devServerUrl, getPinForNode, hasPinForNode, handleRequestLoad, handleIframeLoaded, handleDoubleClickNode, vpDims, liveOverrides, reloadKeys, showLabels]
   );
 
   const edges = useMemo(
@@ -548,8 +546,6 @@ function AppInner() {
         onReloadScreen={handleReloadScreen}
         onToggleLive={handleToggleLive}
         liveOverrides={liveOverrides}
-        hugContent={hugContent}
-        onToggleHugContent={() => setHugContent((v) => !v)}
         pinnedState={activeNodeId ? getPinForNode(activeNodeId) : undefined}
         globalAuth={globalAuth}
         onUpdatePin={setPinForNode}

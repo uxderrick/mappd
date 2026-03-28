@@ -4,7 +4,7 @@ export default function LandingPage() {
   return (
     <div className="landing">
       <div className="landing-content">
-        <h1>Winston Demo</h1>
+        <h1>Mappd Demo</h1>
         <p className="tagline">
           A multi-screen React app for testing Mappd navigation
         </p>

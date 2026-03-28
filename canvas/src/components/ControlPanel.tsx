@@ -9,7 +9,6 @@ import {
   Download,
   Minus,
   Monitor,
-  MouseSimple,
   PencilSimple,
   Play,
   Plus,
@@ -55,8 +54,6 @@ interface ControlPanelProps {
   onEdgeStyleChange: (style: EdgeStyle) => void;
   onReloadScreen: (nodeId: string) => void;
   onToggleLive: (nodeId: string) => void;
-  hugContent: boolean;
-  onToggleHugContent: () => void;
   liveOverrides: Record<string, boolean>;
   // Pin state
   pinnedState?: PinnedState;
@@ -95,8 +92,6 @@ export default function ControlPanel({
   onReloadScreen,
   onToggleLive,
   liveOverrides,
-  hugContent,
-  onToggleHugContent,
   pinnedState,
   globalAuth,
   onUpdatePin,
@@ -324,13 +319,6 @@ export default function ControlPanel({
             </button>
             <button className="fc-cp-icon-btn" onClick={handleOpenInBrowser} title="Open in browser">
               <ArrowSquareOut size={14} />
-            </button>
-            <button
-              className={`fc-cp-icon-btn ${hugContent ? 'is-active' : ''}`}
-              onClick={onToggleHugContent}
-              title={hugContent ? 'Scroll mode on (click to disable)' : 'Enable scroll mode'}
-            >
-              <MouseSimple size={14} />
             </button>
           </div>
         )}

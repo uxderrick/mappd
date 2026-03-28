@@ -43,3 +43,6 @@ skills-lock.json
 
 # Claude memory (local)
 .claude/
+
+# OSS demo apps (cloned repos, too large to commit)
+demos/oss/

@@ -19,6 +19,55 @@
 
 <!-- Newest entries at the top -->
 
+### [2026-03-28] Real-world routing & state patterns — research across 18 open source projects
+**Context:** Studied public GitHub projects across all 4 supported frameworks to understand how real apps handle routing and state, and what our parser would miss.
+
+**Projects studied:**
+- React Router v6: Bulletproof React (29k stars), LobeChat (74k stars), CoreUI Admin (5k), Refine (30k), React Admin Dashboard
+- React Router v7: hoosierhuy/rr7-ssr, micko4develop/rr7-guide, machadop1407/rr7-tutorial, forge-42/base-stack, PaulBratslavsky/rr7-strapi
+- Next.js App Router: Dub (link management), Cal.com (34k), Midday (finance), Taxonomy/shadcn, TypeHero
+- Next.js Pages Router: Cal.com (pages dir), Papermark (5k), BoxyHQ SaaS Kit (4.8k)
+
+**Key routing patterns our parser needs to handle better:**
+
+1. **Centralized path configs** — Bulletproof React defines all paths in a `paths.ts` config object (`paths.app.discussion.path`). Our parser would need to resolve these indirections.
+2. **`lazy: () => import(...)` vs `React.lazy()`** — Two different lazy loading patterns. RR6's native `lazy` returns route module exports, `React.lazy` returns components. We detect neither fully.
+3. **`import.meta.glob` auto-discovery** — Vite convention-based routing in user code (not framework). Files matching `**/*.router.tsx` become routes. Would need glob pattern detection.
+4. **Custom lazy wrappers** — LobeChat uses `dynamicElement()` and `dynamicLayout()` around `React.lazy`. Parser needs to unwrap custom helpers.
+5. **Separate mobile vs desktop router configs** — LobeChat has completely different route trees per platform.
+6. **Route guard wrappers** — `<ProtectedRoute>`, `<Authenticated fallback={...}>`, recursive `wrapWithProtectedRoute()`. These are routing-significant but not routes themselves.
+7. **`flatRoutes()` with escaped chars** — `robots[.]txt.ts` → `/robots.txt`. The bracket escape syntax.
+8. **`layout()` and `prefix()`** in RR v7 — `layout()` wraps children with no URL segment, `prefix()` adds URL prefix with no layout.
+9. **Resource routes** — `.ts` (not `.tsx`) files that export only loaders, no UI. Should be excluded from screen nodes.
+10. **`clientLoader`/`clientAction`** — RR v7 client-side data fetching. Our parser should detect both server and client variants.
+11. **Triple-nested route groups** — Midday: `[locale]/(app)/(sidebar)`. 3+ levels deep.
+12. **`(dashboard)/dashboard/` pattern** — Taxonomy: route group containing a URL segment folder.
+13. **Server actions as `.action.ts` files** — TypeHero convention. Different from inline `"use server"`.
+14. **`_components/` convention** — underscore opts folders out of routing. Different from `_layout` pathless routes.
+15. **Three layout patterns in Pages Router** — `getLayout` (canonical), inline `<AppLayout>` wrapping, `Component.PageWrapper` (Cal.com custom).
+16. **Re-exported `getServerSideProps`** — imported from utility modules, not defined inline in the page file.
+17. **Conditional providers in `_app.tsx`** — Papermark excludes paths from certain providers based on `router.pathname`.
+18. **`getInitialProps` in `_app.tsx`** — Legacy pattern still used by Cal.com for locale detection.
+
+**Key state patterns our detector needs to handle:**
+
+1. **Zustand** — Most popular external store (LobeChat has 25 store modules). Uses `create()`, `persist` middleware, `subscribeWithSelector`. Some inject `useNavigate` into the store for non-component navigation.
+2. **URL search params as state** — `useSearchParams()` for pagination, filters, redirects. Also `nuqs` library for type-safe URL state (Midday).
+3. **React Query / tRPC / SWR** — Server state cached on client. Not hook-based state but drives UI significantly. The dominant data fetching pattern across all projects.
+4. **Redux** — Still used (CoreUI). `useSelector` for reading, `dispatch` for updates.
+5. **Auth state driving routes** — Every project has auth state that determines routing (guards, redirects, conditional layouts). Auth is never "just state" — it's routing-critical.
+6. **Navigator injection** — LobeChat registers `useNavigate` into Zustand store so non-component code can navigate. Parser would see `store.navigate()` not `useNavigate()`.
+7. **`syncWithLocation`** — Refine syncs internal state bidirectionally with URL. Filters/pagination reflected in URL automatically.
+8. **Intent-based forms** — Multiple submit buttons with `name="intent" value="update|delete"` in RR v7 actions.
+
+**What this means for our parser:**
+- Our current parser handles ~60-70% of real-world patterns well (file-based routes, Link/useNavigate, basic useState/useReducer)
+- The biggest gap is **external state stores** (Zustand, Redux) — 3 of 5 RR v6 projects use one
+- Second biggest gap is **lazy loading indirection** — paths defined in config objects, wrapped in helpers
+- Third is **server state** (React Query/SWR/tRPC) — the dominant fetching pattern, but not hook-state
+
+**Related:** todo.md State Override Matrix, parser/src/
+
 ### [2026-03-28] React state override: dispatch > overrideHookState
 **Context:** Building state-driven screen detection — clicking a state button should change the iframe's UI
 **Learning:** React DevTools' `overrideHookState(fiber, hookIndex, path, value)` sets the value internally but does NOT trigger a re-render in React 19. The reliable approach is to call `hookState.queue.dispatch(value)` directly — this is the actual setter function (`setStep`, `setTab`, etc.) that React uses internally. It triggers a proper re-render because it goes through React's normal scheduling.
