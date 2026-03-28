@@ -20,6 +20,13 @@
 
 <!-- Newest entries at the top -->
 
+### [2026-03-28] Real-world pattern research — 18 open source projects across 4 frameworks
+**What was done:** Launched 4 parallel research agents to study real-world open source projects on GitHub. Analyzed routing structure, state management, navigation patterns, and edge cases across: React Router v6 (5 projects including LobeChat 74k stars, Bulletproof React 29k), React Router v7 (5 projects), Next.js App Router (5 projects including Cal.com 34k, Dub), Next.js Pages Router (3 projects). No code cloned — pure research.
+**Why:** Our parser was built against our own demo apps and framework docs. Real-world code has patterns we hadn't considered — centralized path configs, custom lazy wrappers, Zustand stores with 25 modules, triple-nested route groups, server actions in separate files, etc.
+**Trade-offs:** Research-only, no code changes. The findings inform what to build next but don't fix anything immediately.
+**Outcome:** Identified 18 routing patterns and 8 state patterns our parser needs to handle. Estimated current coverage at 60-70% of real-world patterns. Biggest gaps: external state stores (Zustand/Redux), lazy loading indirection, server state (React Query/SWR/tRPC). Full findings in learnings.md.
+**Related:** learnings.md, todo.md
+
 ### [2026-03-28] State override fix — fiber targeting + dispatch strategy
 **What was done:** Fixed state override so clicking state buttons in the right panel actually changes the iframe's UI. Three root causes identified and fixed: (1) Wrong component targeted — generic hook search found `AuthProvider` instead of `CreateProjectPage`. Fixed by sending the route's `componentName` and matching against `fiber.type.name` in the tree. (2) React 19 `overrideHookState` doesn't trigger re-render — switched to calling `hookState.queue.dispatch(value)` directly, which is the same as calling `setState()` from inside the component. (3) `useReducer` needs action objects — added inference that inspects the current state shape (`{ view: 'overview' }`) and constructs `{ type: 'SET_VIEW', payload: value }` automatically. Also added `useReducer` support by passing `hookType` through the full chain (ControlPanel → App → postMessage → inject script).
 **Why:** State-driven screen detection was half-done — parser detected states but clicking them did nothing visible

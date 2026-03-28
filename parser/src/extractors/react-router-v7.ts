@@ -336,6 +336,10 @@ export function extractFlatRoutes(routesDir: string, projectDir: string): Parsed
     const fullPath = path.join(routesDir, entry.name);
 
     if (entry.isDirectory()) {
+      // Skip non-route directories (_components, _utils, _lib, _shared, etc.)
+      const NON_ROUTE_DIRS = ['_components', '_utils', '_lib', '_shared', '_helpers', '_hooks', '_types', '__tests__'];
+      if (NON_ROUTE_DIRS.includes(entry.name)) continue;
+
       // Folder-based route module: check for route.tsx inside
       const routeFile = VALID_ROUTE_EXTENSIONS
         .map((ext) => path.join(fullPath, `route${ext}`))
@@ -363,8 +367,15 @@ export function extractFlatRoutes(routesDir: string, projectDir: string): Parsed
 
     const baseName = path.basename(entry.name, ext);
 
-    // Skip test files, utils, etc.
+    // Skip test files, utils, server-only modules
     if (baseName.endsWith('.test') || baseName.endsWith('.spec')) continue;
+    if (baseName.endsWith('.server')) continue;
+
+    // Skip resource routes (.ts/.js without .tsx/.jsx) that have no default export (no UI)
+    if ((ext === '.ts' || ext === '.js') && !hasDefaultExport(fullPath)) continue;
+
+    // Skip directories prefixed with _ that aren't route layouts (e.g. _components, _utils)
+    // These are already handled above for _layout patterns, but plain _ dirs should be excluded
 
     const routePath = flatFileNameToPath(baseName);
     const componentName = deriveComponentName(baseName);
@@ -514,6 +525,32 @@ function getParentPath(routePath: string): string | undefined {
   const parts = routePath.split('/').filter(Boolean);
   if (parts.length <= 1) return '/';
   return '/' + parts.slice(0, -1).join('/');
+}
+
+/**
+ * Check if a file has a default export (i.e., it's a UI route, not a resource route).
+ * Resource routes export only loader/action but no default component.
+ */
+function hasDefaultExport(filePath: string): boolean {
+  try {
+    const ast = parseFile(filePath);
+    let found = false;
+    traverse(ast, {
+      ExportDefaultDeclaration() { found = true; },
+      // Also catch: export { Foo as default }
+      ExportNamedDeclaration(p) {
+        for (const spec of p.node.specifiers) {
+          if (t.isExportSpecifier(spec) && t.isIdentifier(spec.exported, { name: 'default' })) {
+            found = true;
+          }
+        }
+      },
+    });
+    return found;
+  } catch {
+    // If we can't parse, assume it's a route
+    return true;
+  }
 }
 
 function flattenChildren(routes: ParsedRoute[]): ParsedRoute[] {

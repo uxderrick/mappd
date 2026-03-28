@@ -88,4 +88,5 @@ export type Framework = 'react-router' | 'react-router-v7' | 'nextjs-app' | 'nex
 export interface FrameworkDetection {
   framework: Framework;
   entryPoints: string[];
+  projectRoot?: string; // For monorepos: the sub-package directory
 }

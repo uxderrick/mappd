@@ -19,6 +19,23 @@
 
 <!-- Newest entries at the top -->
 
+### [2026-03-28] OSS demo apps expose parser limitations — monorepos, abstract routing, auth-gated pages
+**Context:** Cloned React-Admin (RR v6), Actual Budget (RR v7), and Papermark (Next.js Pages Router) as OSS demos. Ran FlowCanvas parser on each.
+
+**Results:**
+- React-Admin: **0 routes** — uses `<Resource>` components that auto-generate routes, not explicit `<Route>` definitions. Parser can't detect this abstraction layer.
+- Actual Budget: **0 routes** — monorepo with app in `packages/desktop-client/`. Parser scanned root `package.json` but the react-router dependency and route files live in a nested package.
+- Papermark: **7 routes** — only auth pages detected (`/login`, `/register`, `/verify`, etc.). Main app pages live behind middleware/auth patterns the parser doesn't follow.
+- Cal.com: **205 routes** — worked perfectly because it uses standard Next.js App Router file-based routing at `apps/web/app/`.
+
+**Key parser gaps identified:**
+1. **Monorepo scanning** — parser should detect and scan `packages/*/`, `apps/*/` subdirectories, not just root
+2. **Abstract routing** — `<Resource>`, `<Admin>`, and similar meta-frameworks that generate routes programmatically
+3. **Auth-gated pages** — Pages Router apps where main pages are behind middleware; parser only finds public pages
+
+**Why it matters:** The parser works great on standard patterns but real OSS apps often use non-standard routing. For demos, use apps with straightforward routing. For product, these are the next parser improvements to tackle.
+**Related:** demos/oss/, todo.md
+
 ### [2026-03-28] Real-world routing & state patterns — research across 18 open source projects
 **Context:** Studied public GitHub projects across all 4 supported frameworks to understand how real apps handle routing and state, and what our parser would miss.
 

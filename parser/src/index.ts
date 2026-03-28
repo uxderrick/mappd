@@ -10,7 +10,7 @@ import { extractNextjsPagesRoutes } from './extractors/nextjs-pages-router.js';
 import { extractReactRouterV7Routes } from './extractors/react-router-v7.js';
 import { detectLinks, parseRouteHelpers } from './analyzers/link-detector.js';
 import { detectStateScreens } from './analyzers/state-detector.js';
-import { parseFile } from './analyzers/ast-utils.js';
+import { parseFile, resolveImport } from './analyzers/ast-utils.js';
 import { buildFlowGraph } from './graph-builder.js';
 import { layoutNodes } from './layout.js';
 import type { FlowGraph, DetectedLink, DetectedStateScreen } from './types.js';
@@ -55,8 +55,10 @@ export function parseProject(projectDir: string, options?: ParseOptions): FlowGr
       );
 
       // If entry points yielded 0 routes, deep-scan all .tsx/.jsx files for <Routes> blocks
+      // Use projectRoot (monorepo sub-package) if available, otherwise absDir
       if (allRoutes.length === 0) {
-        const deepFiles = deepScanForRouteFiles(absDir);
+        const scanDir = detection.projectRoot ?? absDir;
+        const deepFiles = deepScanForRouteFiles(scanDir);
         for (const file of deepFiles) {
           const found = extractReactRouterRoutes(file);
           if (found.length > 0) {
@@ -365,6 +367,29 @@ function scanPagesRouterRedirects(
     try {
       const ast = parseFile(route.componentFilePath);
 
+      // Check for re-exported getServerSideProps: export { getServerSideProps } from '../lib/auth'
+      traverse(ast, {
+        ExportNamedDeclaration(nodePath: any) {
+          const source = nodePath.node.source;
+          if (!source || !t.isStringLiteral(source)) return;
+          for (const spec of nodePath.node.specifiers) {
+            if (!t.isExportSpecifier(spec)) continue;
+            const exportedName = t.isIdentifier(spec.exported) ? spec.exported.name : '';
+            if (exportedName === 'getServerSideProps' || exportedName === 'getStaticProps') {
+              // Follow the import to the source file and scan it
+              const resolvedSource = resolveImport(source.value, route.componentFilePath);
+              if (resolvedSource) {
+                try {
+                  const sourceAst = parseFile(resolvedSource);
+                  const sourceLinks = scanAstForRedirects(sourceAst, resolvedSource, route.path);
+                  links.push(...sourceLinks);
+                } catch { /* skip */ }
+              }
+            }
+          }
+        },
+      });
+
       traverse(ast, {
         // Look for: return { redirect: { destination: '/path' } }
         ObjectProperty(nodePath: any) {
@@ -431,6 +456,49 @@ function scanPagesRouterRedirects(
     }
   }
 
+  return links;
+}
+
+/**
+ * Scan an AST for redirect patterns inside getServerSideProps/getStaticProps.
+ * Used for re-exported SSR functions from utility modules.
+ */
+function scanAstForRedirects(
+  ast: ReturnType<typeof parseFile>,
+  filePath: string,
+  routePath: string,
+): DetectedLink[] {
+  const links: DetectedLink[] = [];
+  traverse(ast, {
+    ObjectProperty(nodePath: any) {
+      const key = nodePath.node.key;
+      if (!t.isIdentifier(key) || key.name !== 'redirect') return;
+      if (!t.isObjectExpression(nodePath.node.value)) return;
+
+      const redirectObj = nodePath.node.value;
+      for (const prop of redirectObj.properties) {
+        if (
+          t.isObjectProperty(prop) &&
+          t.isIdentifier(prop.key) &&
+          prop.key.name === 'destination' &&
+          t.isStringLiteral(prop.value)
+        ) {
+          const destination = prop.value.value;
+          if (destination.startsWith('/')) {
+            links.push({
+              sourceFilePath: filePath,
+              sourceRoutePath: routePath,
+              sourceLine: prop.loc?.start.line ?? 0,
+              sourceColumn: prop.loc?.start.column ?? 0,
+              triggerType: 'programmatic',
+              targetPath: destination,
+              labelHint: `SSR Redirect: ${destination}`,
+            });
+          }
+        }
+      }
+    },
+  });
   return links;
 }
 

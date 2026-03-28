@@ -27,6 +27,7 @@ export function detectFramework(projectDir: string): FrameworkDetection {
       const subDir = path.join(appsDir, entry.name);
       const result = tryDetectFramework(subDir);
       if (result) {
+        result.projectRoot = subDir;
         return result;
       }
     }

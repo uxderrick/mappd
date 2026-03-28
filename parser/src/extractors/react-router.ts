@@ -199,6 +199,13 @@ function parseRouteObject(
       case 'path':
         if (t.isStringLiteral(prop.value)) {
           routePath = prop.value.value;
+        } else if (t.isTemplateLiteral(prop.value) && prop.value.quasis.length === 1) {
+          // Template literal with no expressions: `dashboard`
+          routePath = prop.value.quasis[0].value.cooked ?? prop.value.quasis[0].value.raw;
+        } else if (t.isMemberExpression(prop.value)) {
+          // Handle path config objects: paths.app.root.path, ROUTES.DASHBOARD
+          const resolved = resolveMemberExpressionPath(prop.value);
+          if (resolved) routePath = resolved;
         }
         break;
 
@@ -456,13 +463,35 @@ function resolveLazyImport(
 
     let importCall: t.CallExpression | null = null;
     if (t.isCallExpression(body) && t.isImport(body.callee)) {
+      // lazy: () => import('./path')
       importCall = body;
+    } else if (
+      t.isCallExpression(body) &&
+      t.isMemberExpression(body.callee) &&
+      t.isIdentifier(body.callee.property, { name: 'then' })
+    ) {
+      // lazy: () => import('./path').then(convert(qc))
+      const obj = body.callee.object;
+      if (t.isCallExpression(obj) && t.isImport(obj.callee)) {
+        importCall = obj;
+      }
     } else if (
       t.isReturnStatement(body) &&
       t.isCallExpression(body.argument) &&
       t.isImport(body.argument.callee)
     ) {
       importCall = body.argument;
+    } else if (
+      t.isReturnStatement(body) &&
+      t.isCallExpression(body.argument) &&
+      t.isMemberExpression(body.argument.callee) &&
+      t.isIdentifier(body.argument.callee.property, { name: 'then' })
+    ) {
+      // return import('./path').then(...)
+      const obj = body.argument.callee.object;
+      if (t.isCallExpression(obj) && t.isImport(obj.callee)) {
+        importCall = obj;
+      }
     }
 
     if (importCall && t.isStringLiteral(importCall.arguments[0])) {
@@ -476,4 +505,41 @@ function resolveLazyImport(
     }
   }
   return null;
+}
+
+/**
+ * Try to resolve a MemberExpression to a string path.
+ * Handles patterns like:
+ *   - paths.app.root.path → extracts segments as a heuristic route path
+ *   - ROUTES.DASHBOARD → "/dashboard"
+ *   - routePaths.login → "/login"
+ */
+function resolveMemberExpressionPath(node: t.MemberExpression): string | null {
+  const parts: string[] = [];
+  let current: t.Node = node;
+
+  while (t.isMemberExpression(current)) {
+    if (t.isIdentifier(current.property)) {
+      parts.unshift(current.property.name);
+    } else if (t.isStringLiteral(current.property)) {
+      parts.unshift(current.property.value);
+    } else {
+      return null;
+    }
+    current = current.object;
+  }
+
+  if (t.isIdentifier(current)) {
+    parts.unshift(current.name);
+  }
+
+  if (parts.length < 2) return null;
+
+  // Drop config object name (paths, ROUTES) and trailing "path" property
+  const meaningful = parts.slice(1);
+  if (meaningful[meaningful.length - 1] === 'path') meaningful.pop();
+  if (meaningful[0] === 'app' || meaningful[0] === 'root') meaningful.shift();
+
+  if (meaningful.length === 0) return '/';
+  return '/' + meaningful.join('/');
 }

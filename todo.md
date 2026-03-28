@@ -91,6 +91,32 @@ Priorities: `P0` (critical/blocking), `P1` (important), `P2` (nice-to-have), `P3
 - [ ] **demo-angular** — Angular Router with lazy routes (when Angular parser is built) `[P3]` `[added: 2026-03-27]`
 - [ ] **demo-sveltekit** — SvelteKit with `+page.svelte`, `goto()` (when Svelte parser is built) `[P3]` `[added: 2026-03-27]`
 
+### Real-World Parser Improvements (from research — 2026-03-28)
+
+**Phase 1 — Parser routing gaps (do now):**
+- [ ] **Resolve path config indirections** — Detect `paths.app.root.path` config objects and resolve to actual path strings. Bulletproof React pattern. `[P1]` `[added: 2026-03-28]`
+- [ ] **Unwrap lazy loading patterns** — Detect `lazy: () => import(...)` (RR native), `React.lazy(() => import(...))`, and custom wrappers like `dynamicElement()`. Resolve the import path to the component file. `[P1]` `[added: 2026-03-28]`
+- [ ] **Detect re-exported getServerSideProps** — Follow imports when `getServerSideProps` is imported from a utility module, not defined inline. Cal.com pattern. `[P1]` `[added: 2026-03-28]`
+- [ ] **Handle RR v7 `clientLoader`/`clientAction`** — Detect client-side data fetching exports alongside server `loader`/`action`. `[P1]` `[added: 2026-03-28]`
+- [ ] **Handle RR v7 `layout()` and `prefix()` helpers** — `layout()` wraps children with no URL segment, `prefix()` adds URL prefix with no layout. Both in routes.ts. `[P1]` `[added: 2026-03-28]`
+- [ ] **Handle resource routes** — `.ts` files (not `.tsx`) that export only loaders, no default component. Exclude from screen nodes. `[P1]` `[added: 2026-03-28]`
+- [ ] **Handle `_components/` excluded directories** — Underscore prefix on directories opts them out of routing (different from `_layout` pathless routes). `[P1]` `[added: 2026-03-28]`
+- [ ] **Handle three Pages Router layout patterns** — `getLayout` (canonical), inline `<AppLayout>` wrapping, `Component.PageWrapper` (Cal.com custom). `[P2]` `[added: 2026-03-28]`
+- [ ] **Handle intent-based forms** — Multiple submit buttons with `name="intent" value="update|delete"` as different navigation triggers in RR v7 actions. `[P2]` `[added: 2026-03-28]`
+- [ ] **Handle `import.meta.glob` route discovery** — Vite convention-based routing where files matching a glob become routes. `[P3]` `[added: 2026-03-28]`
+
+**Phase 2 — State detection gaps (next):**
+- [ ] **Detect Zustand stores** — `create()`, `persist` middleware, `subscribeWithSelector`. Map store shape to state values. LobeChat has 25 store modules. `[P1]` `[added: 2026-03-28]`
+- [ ] **Detect Redux stores** — `createSlice`, `useSelector`, `useDispatch`. Map selectors to state shapes. `[P1]` `[added: 2026-03-28]`
+- [ ] **Detect URL search params as state** — `useSearchParams()` from react-router, `nuqs` library. Pagination, filters, redirects stored in URL. `[P1]` `[added: 2026-03-28]`
+- [ ] **Detect React Query/SWR/tRPC** — Server state cache. Not overridable via hooks but drives UI significantly. At minimum, detect query keys and endpoints. `[P2]` `[added: 2026-03-28]`
+
+**Phase 3 — Canvas UX for large apps (after):**
+- [ ] **Route grouping/filtering** — Real apps have 50+ routes. Need collapsible groups, search, filter by path prefix. `[P2]` `[added: 2026-03-28]`
+- [ ] **Auth flow visualization** — Show which routes are protected, redirect chains, guard components. `[P2]` `[added: 2026-03-28]`
+- [ ] **Lazy loading indicators** — Show which routes are code-split on the canvas. `[P3]` `[added: 2026-03-28]`
+- [ ] **Server vs client component markers** — Next.js App Router: visually distinguish server and client components. `[P3]` `[added: 2026-03-28]`
+
 ### Bugs / Polish
 - [x] **Auto re-layout on viewport change** — Changing viewport (Desktop→Mobile) changes node height, causing nodes to overlap. Auto re-runs dagre layout when viewport preset changes `[P1]` `[done: 2026-03-27]`
 - [x] **Investigate DevTools section** — Verify DevTools (Console/Network/Storage) works in right panel after moving from per-node. Test: does the iframe registry return the right ref? Does postMessage still flow? Are console entries attributed to the correct node? `[P1]` `[added: 2026-03-27]`
