@@ -100,6 +100,70 @@ You can commit `.mappd/` to your repo or add it to `.gitignore`. Your call.
 
 ---
 
+## FAQ
+
+<details>
+<summary><strong>Does my app need to be running?</strong></summary>
+
+No — for route parsing. Mappd reads your source files statically. But yes — for live screen previews and screenshots. Your dev server (Vite, Next.js, etc.) should be running so the iframes can render your actual UI.
+</details>
+
+<details>
+<summary><strong>Does Mappd modify my code?</strong></summary>
+
+Temporarily. It copies a small script (`mappd-inject.js`) to your project's `public/` directory and adds a `<script>` tag to your HTML entry point (`index.html` or `app/layout.tsx`). Both are automatically removed when you stop Mappd with Ctrl+C. If Mappd crashes without cleanup, just delete `mappd-inject.js` and remove the script tag.
+</details>
+
+<details>
+<summary><strong>How does it handle auth-protected routes?</strong></summary>
+
+State pinning. Set auth state once (JWT, session token, user object) in the right panel, and it gets injected into every screen node globally — just like a real browser session. No need to log in on each screen.
+</details>
+
+<details>
+<summary><strong>Does it work with monorepos?</strong></summary>
+
+Yes. Mappd scans `apps/*/` and `packages/*/` subdirectories to find your app's entry point and routing config. You can also point directly at a sub-package with `mappd dev --dir ./packages/web`.
+</details>
+
+<details>
+<summary><strong>What if my framework isn't auto-detected?</strong></summary>
+
+Mappd falls back to an interactive prompt — it asks 3 questions (framework, entry point, dev server port), then saves the answers to `.mappd/config.json`. You only answer once per project.
+</details>
+
+<details>
+<summary><strong>How many routes can it handle?</strong></summary>
+
+Tested up to 205 routes (Cal.com). For apps with 30+ routes, screens load on-click rather than all at once to prevent browser resource exhaustion. The route graph and canvas itself handle hundreds of nodes without issue.
+</details>
+
+<details>
+<summary><strong>Can I use it with TypeScript?</strong></summary>
+
+Yes. The parser uses Babel with TypeScript and JSX plugins enabled. `.ts`, `.tsx`, `.js`, and `.jsx` files are all supported.
+</details>
+
+<details>
+<summary><strong>Does clicking a link in a screen actually navigate?</strong></summary>
+
+No — that's the point. Mappd intercepts navigation events inside each iframe and pans the canvas to the destination screen instead. You see the flow without losing your place.
+</details>
+
+<details>
+<summary><strong>Can I export the route map?</strong></summary>
+
+Yes. Export as PNG from the canvas controls. Individual screen screenshots can also be captured on demand via the built-in Puppeteer API.
+</details>
+
+<details>
+<summary><strong>Is this a production dependency?</strong></summary>
+
+No. Mappd is a dev-only tool. It runs alongside your dev server and doesn't touch your build output, bundle, or deployment. Nothing ships to your users.
+</details>
+
+---
+
 ## Contributing
 
 Contributions are welcome.
