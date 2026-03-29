@@ -397,7 +397,7 @@ function AppInner() {
             isActive: node.id === activeNodeId,
             screenshotUrl: screenshots[node.id] || undefined,
             zoomLevel: zoom > 0.3 ? 1 : 0, // Stabilized — only changes at threshold
-            canGoLive: true, // Always allow — queue manages concurrency internally
+            canGoLive: zoomAboveThreshold && baseNodes.length <= 30, // For large apps (30+ routes), only load on click/zoom
             pinnedState: pin,
             hasPinnedState: hasPinForNode(node.id),
             viewportWidth: vpDims.width,

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 
-const MAX_CONCURRENT = 4;
+const MAX_CONCURRENT = 2;
 
 /**
  * Manages a queue of iframes to load with a concurrency limit.
