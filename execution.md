@@ -20,6 +20,70 @@
 
 <!-- Newest entries at the top -->
 
+### [2026-03-29] Resource exhaustion fix for large apps (122+ routes)
+**What was done:** actual-budget (122 routes) caused `ERR_INSUFFICIENT_RESOURCES`. Fixed: apps with 30+ routes only load iframes on click (not auto on zoom). Reduced queue concurrency from 4 to 2.
+**Why:** Real production apps have 50-200+ routes. Can't load them all simultaneously.
+**Outcome:** Large apps show placeholders, load on click. Small apps (<30 routes) auto-load as before.
+
+### [2026-03-29] On-demand Puppeteer screenshot API
+**What was done:** Added `GET /api/screenshot?path=/route` to CLI's Express server. Puppeteer captures fresh screenshot on demand, returns PNG buffer. Shared browser instance (launched once, reused). Browser closed on Ctrl+C. Canvas export button calls API, receives blob, triggers download with delayed `URL.revokeObjectURL()`.
+**Why:** Client-side screenshot of cross-origin iframes is impossible (browser security). Server-side Puppeteer is the only approach — same as Chromatic/Storybook.
+**Outcome:** Export downloads valid 1280x800 PNGs. Full canvas export still uses html-to-image.
+
+### [2026-03-29] Monorepo-aware script injection
+**What was done:** `injectScript()` now builds a `searchRoots` array including `packages/*/` and `apps/*/` sub-directories. Searches all roots for `index.html` (Vite/CRA) and `app/layout.tsx` (Next.js). Fixed actual-budget where HTML was in `packages/desktop-client/index.html`.
+**Why:** Same monorepo pattern as parser — every operation needs to target the sub-package, not the root.
+**Outcome:** Automatic injection works for monorepos. Tested on actual-budget (122 routes rendered with live content).
+
+### [2026-03-29] Deep scan fallback for JSX routes + monorepo sub-package targeting
+**What was done:** When entry point scanning finds 0 routes, deep-scan all .tsx/.jsx files in src/ for `<Routes>`, `<Route>`, `createBrowserRouter`, `useRoutes`. Quick string check before AST parse. For monorepos, scan the detected sub-package root (`detection.projectRoot`), not the project root.
+**Why:** actual-budget defines routes in `src/components/FinancesApp.tsx`, not in standard entry files. react-admin defines routes across framework packages.
+**Outcome:** actual-budget: 0 → 122 routes. react-admin: 0 → 97 routes.
+
+### [2026-03-29] Nodes disappearing fix — stabilize useMemo dependencies
+**What was done:** Two deps in the nodes useMemo caused all iframes to remount on every interaction: (1) `zoom` changed on every scroll pixel — replaced with derived `zoomAboveThreshold` boolean. (2) `shouldLoad` changed every time any iframe loaded — removed from deps, set `canGoLive: true` always.
+**Why:** Each dep change recalculated ALL nodes, remounting every iframe.
+**Outcome:** Nodes stay visible during scroll/zoom/loading. No more disappearing screens.
+
+### [2026-03-29] OSS testing — actual-budget, papermark, react-admin
+**What was done:** Cloned 3 OSS projects to `demos/oss/`. Parsed all three. actual-budget: 122 routes (after deep scan fix). papermark: 7 auth routes. react-admin: 97 routes (after deep scan). Removed actual-budget from OSS demos (needs backend).
+**Why:** Validate parser and canvas on real-world production codebases.
+**Outcome:** Parser handles monorepos, deep component trees, and large route counts. Canvas needs backend-free apps for live preview.
+
+### [2026-03-28] README updated with current project state
+**What was done:** Audited README.md against actual codebase and fixed 5 outdated items: (1) Supported Frameworks table — added React Router v7 and Next.js Pages Router as "Supported" (were missing/listed as "Planned"). (2) Default canvas port — `4200` → `3569`. (3) Target port — now "Auto-detected" instead of hardcoded `5173`. (4) Quick Start description — mentions auto-detection. (5) `.mappd/` directory contents — replaced nonexistent `pins.json` with actual files (`config.json`, `screenshots/`, `screenshots.json`). (6) How It Works section — added `redirect()`, file-based routing, and interactive fallback prompt.
+**Why:** README was written during initial PoC and hadn't been updated as features were added.
+**Outcome:** README now accurately reflects the current CLI, parser, and supported frameworks.
+**Related:** README.md
+
+### [2026-03-28] OSS demo app testing — parser limitations exposed
+**What was done:** Ran FlowCanvas parser against 4 cloned OSS apps to validate real-world parsing. Results:
+- **Cal.com** (Next.js App Router, 41k stars): **205 routes, 74 connections** — worked perfectly. Standard file-based `app/` directory routing parsed flawlessly. This was the validation moment — FlowCanvas works on a massive production codebase.
+- **Papermark** (Next.js Pages Router, 8k stars): **7 routes** — only auth pages detected (`/login`, `/register`, `/verify`). Main app pages behind middleware/auth patterns not followed by parser.
+- **React-Admin** (React Router v6, 27k stars): **0 routes** — uses `<Resource>` component abstraction that auto-generates routes. Parser only detects explicit `<Route>` definitions and `createBrowserRouter` config.
+- **Actual Budget** (React Router v7, 26k stars): **0 routes** — monorepo with app in `packages/desktop-client/`. Parser scanned root but didn't find router deps there. When pointed at the nested package directly, parser hung (likely detection issue with `react-router` without `react-router-dom`).
+
+**Why:** Needed to validate parser against real OSS apps for demo purposes.
+**Trade-offs:** Could fix parser for these edge cases now, but parser improvements are being handled in a separate session. These apps remain cloned for re-testing once fixes land.
+**Outcome:** Confirmed parser works excellently on standard routing patterns (Cal.com). Identified 3 parser gaps: monorepo scanning, abstract routing frameworks, auth-gated Pages Router apps. Logged to learnings.md.
+**Related:** learnings.md → OSS demo apps expose parser limitations, demos/oss/
+
+### [2026-03-28] OSS demo app research, selection, and cloning
+**What was done:** Set up demo infrastructure for FlowCanvas. Created `demos/` folder structure with `oss/` (open-source showcase apps) and `test/` (internal test apps). Moved existing demo apps (`demo-nextjs-app`, `demo-react-router-v6`, `demo-react-router-v7`) to `demos/test/`. Added `demos/oss/` to `.gitignore` (cloned repos too large to commit).
+
+Researched 20+ open-source apps across GitHub, verifying licenses, setup complexity, star counts, and routing patterns. Narrowed to 4 apps covering all 4 supported frameworks:
+- React-Admin (RR v6, 27k stars, MIT, easy setup — no backend needed)
+- Actual Budget (RR v7, 26k stars, MIT, easy setup — local-first SQLite)
+- Cal.com (Next.js App Router, 41k stars, AGPL, needs Postgres)
+- Papermark (Next.js Pages Router, 8k stars, AGPL, needs Postgres)
+
+Cal.com was later removed (disk space constraints — 870MB repo + dependencies on a nearly-full disk). PostgreSQL already installed via Homebrew (v16).
+
+**Why:** OSS demos let potential users see FlowCanvas running on apps they already recognize — stronger sales signal than custom test apps.
+**Trade-offs:** (1) Chose apps with standard routing patterns over the most popular ones — parser compatibility matters more than star count. (2) Dropped Cal.com despite it being the best parser result (205 routes) due to disk/infra overhead — kept it as a future re-add. (3) Only 1 Next.js App Router app (Cal.com) was in the final set — still a gap to fill.
+**Outcome:** 3 OSS apps cloned in `demos/oss/`. Parser testing revealed limitations (see separate entry). Demo infrastructure ready for future additions.
+**Related:** demos/, .gitignore, todo.md
+
 ### [2026-03-28] Real-world pattern research — 18 open source projects across 4 frameworks
 **What was done:** Launched 4 parallel research agents to study real-world open source projects on GitHub. Analyzed routing structure, state management, navigation patterns, and edge cases across: React Router v6 (5 projects including LobeChat 74k stars, Bulletproof React 29k), React Router v7 (5 projects), Next.js App Router (5 projects including Cal.com 34k, Dub), Next.js Pages Router (3 projects). No code cloned — pure research.
 **Why:** Our parser was built against our own demo apps and framework docs. Real-world code has patterns we hadn't considered — centralized path configs, custom lazy wrappers, Zustand stores with 25 modules, triple-nested route groups, server actions in separate files, etc.

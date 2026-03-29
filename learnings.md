@@ -19,6 +19,37 @@
 
 <!-- Newest entries at the top -->
 
+### [2026-03-29] ERR_INSUFFICIENT_RESOURCES with 122 iframes — large app scaling limit
+**Context:** Ran Mappd on actual-budget (122 routes). Browser crashed with `net::ERR_INSUFFICIENT_RESOURCES`.
+**Learning:** Each iframe fires dozens of Vite module requests. 122 × 50+ modules = 6000+ concurrent HTTP requests. Fix: apps with 30+ routes only load iframes on click, not auto on zoom. Queue concurrency reduced from 4 to 2.
+**Why it matters:** Real apps have 50-200+ routes. The canvas must handle showing hundreds of nodes without killing the browser.
+
+### [2026-03-29] OSS apps needing backends are poor canvas test candidates
+**Context:** actual-budget crashed with `ACTUAL_VERSION` undefined — needs sync-server backend.
+**Learning:** For testing the canvas (live iframes), the target app must be self-contained. Apps with backend deps show error screens. The parser works fine (reads source, not running apps), but canvas demos break. Best targets: our demo apps or templates with mock data.
+
+### [2026-03-29] Monorepo script injection must search sub-packages
+**Context:** `injectScript()` only searched project root for `index.html`. For actual-budget, the HTML was in `packages/desktop-client/index.html`.
+**Learning:** Same pattern as parser monorepo fix — build a `searchRoots` array including `packages/*/` and `apps/*/`, iterate all roots for public dirs, HTML files, and layout files.
+
+### [2026-03-29] Cross-origin iframe screenshots impossible from client-side JS
+**Context:** PNG export returned corrupted files. html-to-image, Canvas API, dom-to-image all fail on cross-origin iframes.
+**Learning:** Browser security taints any canvas drawing cross-origin content. Solution: server-side Puppeteer API (`GET /api/screenshot?path=/route`). Puppeteer navigates directly — no CORS. Key gotcha: `URL.revokeObjectURL()` must be delayed 3s — revoking immediately corrupts the download. Same approach Chromatic/Storybook uses.
+
+### [2026-03-29] Deep scan unlocks routes hidden in component trees
+**Context:** actual-budget defines routes in `src/components/FinancesApp.tsx`, not in entry files. Parser found 0 routes from standard entry scanning.
+**Learning:** Fallback: when entry points yield 0 routes, scan ALL .tsx/.jsx files for `<Routes>`, `<Route>`, `createBrowserRouter`, or `useRoutes`. Quick string check before expensive AST parse. For monorepos, scan the detected sub-package root, not the project root. Result: 0 → 122 routes from ~20 lines of code.
+
+### [2026-03-29] Nodes disappearing — useMemo dependency cascade
+**Context:** Iframes kept mounting then immediately unmounting. Screens appeared briefly then went blank.
+**Learning:** Two unstable useMemo deps caused ALL nodes to recreate on every frame: (1) `zoom` changed on every scroll pixel — fixed by deriving a boolean `zoomAboveThreshold` that only flips at 0.3. (2) `shouldLoad` from useIframeQueue changed every time any iframe finished loading — removed from deps entirely, set `canGoLive: true` always (queue manages concurrency internally). These two caused the cascade: dep changes → useMemo recalculates → all nodes recreate → all iframes remount → blank screens.
+
+### [2026-03-28] Cal.com validates parser at scale — 205 routes parsed from production codebase
+**Context:** Ran FlowCanvas parser against Cal.com (41k stars, Next.js App Router, massive monorepo with 16k+ commits).
+**Learning:** The parser detected **205 routes and 74 connections** with zero configuration. Standard file-based App Router routing (`app/` directory with `page.tsx` files) is the parser's strongest mode. The route tree included deeply nested settings pages, dynamic segments, route groups, parallel routes, and catch-all segments — all handled correctly. This is the first validation that FlowCanvas works on a real, large-scale production app.
+**Why it matters:** Proves the parser scales. 205 routes is far beyond what our test demos exercise (5-15 routes). Also proves the value proposition — seeing 205 routes on a canvas is immediately impressive, even without screenshots.
+**Related:** demos/oss/, execution.md
+
 ### [2026-03-28] OSS demo apps expose parser limitations — monorepos, abstract routing, auth-gated pages
 **Context:** Cloned React-Admin (RR v6), Actual Budget (RR v7), and Papermark (Next.js Pages Router) as OSS demos. Ran FlowCanvas parser on each.
 
