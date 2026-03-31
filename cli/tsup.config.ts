@@ -8,6 +8,9 @@ export default defineConfig({
   clean: true,
   splitting: false,
   sourcemap: false,
+  // Inject createRequire shim so bundled CJS packages (commander, ws, chokidar)
+  // can use require() for Node built-ins inside the ESM output
+  shims: true,
   // Keep as runtime deps (not bundled):
   // - express: too many dynamic requires
   // - puppeteer: ships native browser binaries
@@ -25,6 +28,10 @@ export default defineConfig({
     '@babel/types',
   ],
   banner: {
-    js: '#!/usr/bin/env node',
+    js: [
+      '#!/usr/bin/env node',
+      'import { createRequire as __cr } from "node:module";',
+      'const require = __cr(import.meta.url);',
+    ].join('\n'),
   },
 });
