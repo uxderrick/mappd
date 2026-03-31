@@ -1,6 +1,6 @@
 {
   "name": "mappd",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "type": "module",
   "bin": {
     "mappd": "./dist/index.js"
@@ -11,7 +11,7 @@
   ],
   "scripts": {
     "build": "tsc",
-    "build:canvas": "cd ../canvas && npm run build && cp -r dist ../cli/canvas-dist",
+    "build:canvas": "cd ../canvas && npm run build && rm -rf ../cli/canvas-dist && cp -r dist ../cli/canvas-dist",
     "prepublishOnly": "npm run build:canvas && npm run build",
     "dev": "tsx src/index.ts",
     "test": "vitest run",

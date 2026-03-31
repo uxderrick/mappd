@@ -1,7 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "build": "cd canvas && npm run build && cp -r dist ../cli/canvas-dist",
+    "build": "cd canvas && npm run build && rm -rf ../cli/canvas-dist && cp -r dist ../cli/canvas-dist",
     "build:canvas": "cd canvas && npm run build",
     "build:cli": "cd cli && npm run build"
   }
