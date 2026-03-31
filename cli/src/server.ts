@@ -270,7 +270,9 @@ window.location.replace("${targetUrl}");
     throw err;
   });
 
-  server.listen(port, () => {});
+  server.listen(port, () => {
+    // Confirm the server started — silence is confusing when debugging
+  });
 
   return {
     broadcast(data: any) {

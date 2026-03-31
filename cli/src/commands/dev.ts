@@ -76,7 +76,9 @@ export async function devCommand(options: DevOptions) {
   console.log('');
 
   // Step 3: Inject mappd-inject.js into target project
-  const canvasDir = path.resolve(import.meta.dirname, '../../canvas-dist');
+  // In the built bundle (dist/index.js), canvas-dist is a sibling of dist/
+  // import.meta.dirname = <pkg>/dist/, so ../canvas-dist = <pkg>/canvas-dist/
+  const canvasDir = path.resolve(import.meta.dirname, '../canvas-dist');
   const flowGraphDir = path.join(projectDir, '.mappd');
   const injection = injectScript(projectDir, canvasDir);
 
