@@ -19,13 +19,16 @@ export function createServer(options: ServerOptions) {
   const server = http.createServer(app);
 
   // WebSocket server for live updates
-  const wss = new WebSocketServer({ server });
+  const wss = new WebSocketServer({ server, noServer: false });
   const clients = new Set<WebSocket>();
 
   wss.on('connection', (ws) => {
     clients.add(ws);
     ws.on('close', () => clients.delete(ws));
   });
+
+  // Handle WSS errors (e.g. EADDRINUSE bubbles here too)
+  wss.on('error', () => {});
 
   // Serve flow-graph.json from .mappd directory
   app.get('/flow-graph.json', (_req, res) => {
