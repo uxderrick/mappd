@@ -4,12 +4,16 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "prepublishOnly": "npm run build",
     "dev": "tsc --watch",
-    "test": "tsx src/__tests__/parse-demo.ts"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:demo": "tsx src/__tests__/parse-demo.ts"
   },
   "dependencies": {
     "@babel/parser": "^7.24.0",
@@ -22,6 +26,7 @@
     "@types/dagre": "^0.7.52",
     "@types/node": "^20.0.0",
     "tsx": "^4.7.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "vitest": "^3.2.4"
   }
 }

@@ -66,8 +66,13 @@ function scanDirectory(
   // but intentionally do NOT push a route node for it.
   // (No code needed here; we just don't scan DEFAULT_FILES for route creation.)
 
-  // Skip metadata files (sitemap.ts, robots.ts, etc.) — they generate non-UI responses
+  // Check for metadata-only directories (sitemap.ts, robots.ts, etc.)
+  // A directory that has ONLY metadata files (no page/layout) is an API-like route — skip it.
+  // But if a directory has BOTH metadata and page files, the page should still be detected.
   const hasMetadataFile = METADATA_FILES.some((f) => fs.existsSync(path.join(dir, f)));
+  const hasPageFile = PAGE_FILES.some((f) => fs.existsSync(path.join(dir, f)));
+  const hasLayoutFile = LAYOUT_FILES.some((f) => fs.existsSync(path.join(dir, f)));
+  const isMetadataOnly = hasMetadataFile && !hasPageFile && !hasLayoutFile;
 
   // Detect special files at this segment
   const specialFiles: ParsedRoute['specialFiles'] = {};
@@ -98,7 +103,7 @@ function scanDirectory(
   const hasSpecialFiles = Object.keys(specialFiles).length > 0;
 
   // Check for page file in this directory (skip if this dir is an API route or metadata)
-  if (!hasRouteFile && !hasMetadataFile) {
+  if (!hasRouteFile && !isMetadataOnly) {
     for (const pageFile of PAGE_FILES) {
       const pagePath = path.join(dir, pageFile);
       if (fs.existsSync(pagePath)) {
@@ -122,7 +127,7 @@ function scanDirectory(
   }
 
   // Check for layout file (skip if this dir is an API route or metadata)
-  if (!hasRouteFile && !hasMetadataFile) {
+  if (!hasRouteFile && !isMetadataOnly) {
     for (const layoutFile of LAYOUT_FILES) {
       const layoutPath = path.join(dir, layoutFile);
       if (fs.existsSync(layoutPath) && routePath !== '') {

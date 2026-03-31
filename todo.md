@@ -127,6 +127,9 @@ Priorities: `P0` (critical/blocking), `P1` (important), `P2` (nice-to-have), `P3
 - [x] **State override not working** — All three issues addressed: iframe registry handles null refs safely, mappd-inject.js installs hook before React loads, overrideHookState uses dispatch-first strategy with DevTools fallback `[P1]` `[done: 2026-03-28]`
 - [x] **Phosphor Icons** — Replaced all inline SVG icons with `@phosphor-icons/react`. Covers: ControlPanel (ArrowClockwise, Play, Monitor, PencilSimple, ArrowSquareOut, CaretDown, Minus, Plus, ArrowsClockwise, Download, FilePdf), ScreenListPanel (Browser), StatusBar (Monitor, ArrowsLeftRight, Question, X) `[P2]` `[done: 2026-03-27]`
 
+### UX Modes (explore)
+- [ ] **Focus mode vs Overview mode** — Two distinct usage modes: (1) **Focus mode** — single route/component view, where devs live 90% of the time. Priority for core experience. (2) **Overview mode** — full map view, best for demos, onboarding, exploration, and monitoring parallel AI agent workflows (multiple agents working across different routes simultaneously). Overview is essentially composing multiple focus views. Build focus mode first, overview comes almost for free. `[P2]` `[added: 2026-03-31]`
+
 ### Phase 2+ Backlog
 - [x] **Per-node DevTools panel** — Console, Network, Storage tabs built. Moved from per-node to right panel (Figma-style). Uses iframe registry + postMessage for data flow `[P1]` `[done: 2026-03-27]`
 - [x] **State-driven screen detection** — AST analysis for useState/useReducer patterns. Parser detects state hooks, canvas overrides them via fiber dispatch. Works for React Router v6/v7, Next.js App/Pages `[P2]` `[done: 2026-03-28]`

@@ -13,7 +13,9 @@
     "build": "tsc",
     "build:canvas": "cd ../canvas && npm run build && cp -r dist ../cli/canvas-dist",
     "prepublishOnly": "npm run build:canvas && npm run build",
-    "dev": "tsx src/index.ts"
+    "dev": "tsx src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "chokidar": "^3.6.0",
@@ -29,6 +31,7 @@
     "@types/node": "^20.0.0",
     "@types/ws": "^8.5.0",
     "tsx": "^4.7.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "vitest": "^3.2.4"
   }
 }

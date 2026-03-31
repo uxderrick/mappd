@@ -148,7 +148,9 @@ export function detectLinks(
         if (!formTargetPath) return;
 
         // Detect intent-based forms: buttons with name="intent" value="update|delete"
-        const intents = extractFormIntents(nodePath.node);
+        // nodePath.node is JSXOpeningElement — get the parent JSXElement for children
+        const formElement = nodePath.parentPath?.node;
+        const intents = t.isJSXElement(formElement) ? extractFormIntents(formElement) : [];
         if (intents.length > 0) {
           for (const intent of intents) {
             links.push({
@@ -794,7 +796,8 @@ function extractJSXText(element: t.JSXElement): string | null {
 function extractFormIntents(formElement: t.JSXElement): string[] {
   const intents: string[] = [];
 
-  function walkChildren(children: t.JSXElement['children']) {
+  function walkChildren(children: t.JSXElement['children'] | undefined) {
+    if (!children) return;
     for (const child of children) {
       if (!t.isJSXElement(child)) continue;
       const opening = child.openingElement;
