@@ -13,8 +13,10 @@ interface ServerOptions {
   targetPort: number;
 }
 
-export function createServer(options: ServerOptions) {
-  const { port, flowGraphDir, canvasDir, targetPort } = options;
+const MAX_PORT_ATTEMPTS = 10;
+
+export async function createServer(options: ServerOptions) {
+  const { port: preferredPort, flowGraphDir, canvasDir, targetPort } = options;
   const app = express();
   const server = http.createServer(app);
 
@@ -260,21 +262,37 @@ window.location.replace("${targetUrl}");
     });
   }
 
-  server.on('error', (err: NodeJS.ErrnoException) => {
-    if (err.code === 'EADDRINUSE') {
-      console.log(pc.red(`\n  Error: Port ${port} is already in use.`));
-      console.log(pc.dim(`  Kill the existing process: lsof -ti:${port} | xargs kill -9`));
-      console.log(pc.dim(`  Or use a different port: mappd dev --port 3570\n`));
-      process.exit(1);
+  // Try preferred port, then increment until one is free
+  const actualPort = await new Promise<number>((resolve, reject) => {
+    let attempt = 0;
+    let currentPort = preferredPort;
+
+    function tryListen() {
+      server.once('error', (err: NodeJS.ErrnoException) => {
+        if (err.code === 'EADDRINUSE' && attempt < MAX_PORT_ATTEMPTS) {
+          attempt++;
+          currentPort++;
+          tryListen();
+        } else if (err.code === 'EADDRINUSE') {
+          console.log(pc.red(`\n  Error: Ports ${preferredPort}-${currentPort} are all in use.`));
+          console.log(pc.dim(`  Kill existing processes or pass a free port: mappd dev --port <port>\n`));
+          process.exit(1);
+        } else {
+          reject(err);
+        }
+      });
+      server.listen(currentPort, () => resolve(currentPort));
     }
-    throw err;
+
+    tryListen();
   });
 
-  server.listen(port, () => {
-    // Confirm the server started — silence is confusing when debugging
-  });
+  if (actualPort !== preferredPort) {
+    console.log(pc.yellow(`  Port ${preferredPort} in use, using ${actualPort} instead`));
+  }
 
   return {
+    port: actualPort,
     broadcast(data: any) {
       const message = JSON.stringify(data);
       for (const client of clients) {

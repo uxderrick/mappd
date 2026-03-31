@@ -82,7 +82,8 @@ export async function devCommand(options: DevOptions) {
   const flowGraphDir = path.join(projectDir, '.mappd');
   const injection = injectScript(projectDir, canvasDir);
 
-  const server = createServer({ port, flowGraphDir, canvasDir, targetPort });
+  const server = await createServer({ port, flowGraphDir, canvasDir, targetPort });
+  const canvasPort = server.port;
 
   // Step 5: Start file watcher
   const watcher = startWatcher(projectDir, (changedFile) => {
@@ -97,7 +98,7 @@ export async function devCommand(options: DevOptions) {
     }
   });
 
-  console.log(pc.bold(`  Canvas:    `) + pc.cyan(`http://localhost:${port}`));
+  console.log(pc.bold(`  Canvas:    `) + pc.cyan(`http://localhost:${canvasPort}`));
   console.log(pc.bold(`  Target:    `) + pc.cyan(`http://localhost:${targetPort}`));
   console.log(pc.bold(`  Watching:  `) + pc.dim(projectDir));
   console.log('');
