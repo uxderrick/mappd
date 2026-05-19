@@ -20,6 +20,34 @@
 
 <!-- Newest entries at the top -->
 
+### [2026-05-19] CLI perf overhaul + v0.1.12 release
+**What was done:** User reported "every time I run this, my laptop lags." Audited the CLI end-to-end with a code-reviewer subagent and applied 9 perf fixes across `screenshot.ts`, `watcher.ts`, `detect-port.ts`, `server.ts`, `commands/dev.ts`, `index.ts`:
+1. **Lazy `import('puppeteer')`** inside `getBrowser()` — dev runs without `--screenshots` no longer load the ~250MB Chrome bindings into the Node process.
+2. **`waitUntil: 'domcontentloaded'`** + 8s timeout, replacing `networkidle2` + `setTimeout(1000)` which never resolved cleanly against HMR websockets.
+3. **Request interception** in puppeteer to abort `image`/`font`/`media` requests — drops per-route asset graph from ~30 reqs to ~5.
+4. **Screenshot concurrency default 2→1** + lean Chrome flags (`--disable-gpu`, `--disable-dev-shm-usage`, `--disable-extensions`, `--no-first-run`, `--disable-background-networking`, `--disable-background-timer-throttling`, `--disable-renderer-backgrounding`, `--disable-default-apps`, `--mute-audio`).
+5. **Page-leak fix** in `captureScreenshots` error path — `newPage()` now wrapped in try/finally so failures don't accumulate orphan tabs.
+6. **Watcher fallback** — checks `src/` → `app/` → project root in order; added `depth: 8` cap; expanded ignore list (`.turbo`, `.cache`, `.git`, `coverage`).
+7. **Parallel port probe** via `Promise.all` — was sequential 10× 1s timeouts (worst case 10s), now ~1s.
+8. **In-memory flow-graph cache** in server with broadcast-driven invalidation on `graph-update`; `Cache-Control: public, max-age=60` on screenshots; streaming `/proxy/*` non-HTML via `Readable.fromWeb(...).pipe(res)` instead of buffering whole bundles into heap.
+9. **Injection target cache** in `.mappd/injection.json` so monorepo repeat runs skip the multi-level FS scan (was up to 40-80 sync stat calls).
+
+Also added `--screenshots` flag (default off) gating bulk capture in `dev.ts`. Fixed pre-existing bug: `/proxy/*` HTML injection referenced undefined `port` variable — now reads `req.headers.host` so it works after port-bump auto-retry.
+
+**Why:** Real cost of mappd at idle measured at 78-94MB RAM / 0% CPU. But every wasted-work loop, every megabyte buffered, every sync FS scan compounds with target dev server and macOS background load. Cutting each one shrinks the surface area for user-visible lag.
+**Trade-offs:** Lazy puppeteer adds a small first-screenshot latency (one-time module load). Acceptable since users opting into `--screenshots` already accept Chrome spawn cost. Considered swapping `puppeteer` → `puppeteer-core` but rejected — would break UX for users without system Chrome, and lazy-load already removes runtime overhead. Considered increasing concurrency back up but kept at 1 since real benefit is browser interop stability with HMR-heavy dev servers.
+**Outcome:** Built clean (2.33MB CLI bundle). Smoke tested against demo-nextjs-app and demo-react-router-v6. Measured footprint:
+- mappd CLI: 78-94MB / 0% CPU idle, 1.5% under 10-route burst
+- Vite target: 107MB
+- Next.js Turbopack target: 448MB
+- Next.js Webpack target: 743MB / 172% CPU on first compile (worse than Turbopack — never recommend `--webpack`)
+
+Published as `mappd@0.1.12` on npm. README also rewritten — prerequisites section, 3-step Quick Start (install, start app, run mappd), Using the Canvas section, Troubleshooting section (6 entries), `--screenshots` flag documented.
+
+**Related:** learnings.md → Mappd perf vs perceived lag, learnings.md → Puppeteer waitUntil + request interception, README.md, cli/
+
+---
+
 ### [2026-03-29] Resource exhaustion fix for large apps (122+ routes)
 **What was done:** actual-budget (122 routes) caused `ERR_INSUFFICIENT_RESOURCES`. Fixed: apps with 30+ routes only load iframes on click (not auto on zoom). Reduced queue concurrency from 4 to 2.
 **Why:** Real production apps have 50-200+ routes. Can't load them all simultaneously.

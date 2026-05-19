@@ -19,6 +19,58 @@
 
 <!-- Newest entries at the top -->
 
+### [2026-05-19] Perceived "tool lag" is usually target dev server + macOS daemons, not your tool
+**Context:** User insisted mappd was making the laptop lag heavily — to the point of needing a restart. Profiled mappd directly: 78-94MB RAM, 0% CPU idle, 1.5% CPU under 10-route burst. Total mappd footprint was less than a single VSCode tab.
+**Learning:** When users blame your dev tool for "lag," measure before optimizing further. Top hogs on user's machine were `contactsd` (82% CPU), `mds_stores` (49%), `duetexpertd` (41%), `sharingd` (36%) — stuck macOS daemons unrelated to mappd. Plus Next.js Turbopack at 448MB idle vs Vite at 107MB idle. Compound them and load avg hit 93 (10× normal). Mappd contributed <2% combined. The fix wasn't more mappd optimizations — it was `killall` on stuck daemons + recommending Vite for testing.
+**Why it matters:** "User says X is slow" is a hypothesis, not a diagnosis. Always profile per-process before assuming your code is the culprit. Build small benchmark scripts (`ps aux | awk` filters, before/after burst tests) into your toolkit so you can answer the question quickly. The wrong answer wastes hours optimizing innocent code.
+**Related:** execution.md → CLI perf overhaul
+
+### [2026-05-19] Next.js Turbopack is lighter than Webpack — `--no-turbopack` is the wrong perf advice
+**Context:** Naive assumption: Turbopack is "newer/more complex" so Webpack must be lighter. Tested both side-by-side on demo-nextjs-app.
+**Learning:** Numbers (Next 16.2.1, idle after Ready):
+- Vite (RR demo): **107MB / 0% CPU**
+- Next.js Turbopack: **448MB / 0% CPU**
+- Next.js Webpack: **743MB / 172% CPU** (still compiling minutes later)
+Webpack first-compile is dramatically heavier than Turbopack steady-state. Never recommend `--webpack` as a "lighter" option for Next 13+. For perf-sensitive demos and tooling validation, use Vite directly.
+**Why it matters:** Generic advice ("disable the newer bundler") fails empirical tests. Always benchmark before recommending toolchain swaps. Also informs which demo to ship — `demos/test/demo-react-router-v6` (Vite) is the right reference for users to evaluate mappd's footprint.
+**Related:** execution.md → CLI perf overhaul
+
+### [2026-05-19] Puppeteer `networkidle2` + sleep never resolves cleanly against HMR
+**Context:** Screenshot capture was burning the full 15s timeout per route. Investigated why.
+**Learning:** `waitUntil: 'networkidle2'` holds the page until ≤2 network connections are in-flight for 500ms. Combined with HMR websockets (Vite's `/@vite/client`, Next's `_next/webpack-hmr`) which are persistent connections, the "idle" condition is never met. The additive `setTimeout(1000)` was working around the symptom. Correct fix: `waitUntil: 'domcontentloaded'` + `page.setRequestInterception(true)` to abort `image`/`font`/`media` request types. Cuts per-route screenshot from ~10s to ~1-2s and drops asset graph from ~30 reqs to ~5.
+**Why it matters:** Any puppeteer-based tool running against a dev server (not a built site) needs to assume HMR connections will defeat network-idle heuristics. `domcontentloaded` is the safe default for route screenshots since you don't need late-loading assets to capture the DOM shape.
+**Related:** cli/src/screenshot.ts
+
+### [2026-05-19] Lazy ESM `import()` defers heavy native bindings — big win for opt-in features
+**Context:** Puppeteer is a 250MB+ dep (Chrome binary + bindings). Loaded eagerly at CLI startup even when users never request screenshots.
+**Learning:** Move the `import puppeteer from 'puppeteer'` statement inside the first function that actually needs it (`getBrowser()`). Use dynamic `import('puppeteer')` which works in ESM. The module + native bindings only load when the screenshot path executes. Combined with a `--screenshots` opt-in flag, the default `mappd dev` run never pays the puppeteer tax. First screenshot has a small one-time latency for the module load — acceptable since users opting in already accept Chrome spawn cost.
+**Why it matters:** Pattern applies to any optional heavy dep — image processing libs, browser automation, ML runtimes, etc. Top-level imports are convenient but make the whole CLI slower to start. Audit the dep graph and lazy-load anything gated behind a flag or rarely-hit code path.
+**Related:** cli/src/screenshot.ts
+
+### [2026-05-19] In-memory cache + broadcast-driven invalidation beats file-stat per request
+**Context:** Server hit `fs.existsSync` + `res.sendFile` on every `/flow-graph.json` request. Canvas may poll or re-fetch on tab focus. Each call = sync filesystem stat on the hot request path.
+**Learning:** Cache the parsed JSON in a closure variable. Set `null` on `broadcast({ type: 'graph-update', ... })` since that's the only path the file changes. First request after invalidation reads from disk, subsequent requests serve from memory. Same pattern works for any "infrequent writer, frequent reader" endpoint. Add `Cache-Control: public, max-age=60` headers for assets that are immutable between captures (screenshots).
+**Why it matters:** Default Express handlers hit FS on every request. For dev tools serving the same artifact 10-100× per session, this is wasted syscalls. The invalidation hook is trivial because you already control both the write and the broadcast.
+**Related:** cli/src/server.ts
+
+### [2026-05-19] Stream proxy responses — `arrayBuffer()` buffers megabytes into heap
+**Context:** `/proxy/*` non-HTML responses called `await response.arrayBuffer()` then `res.send(Buffer.from(buffer))`. For a JS bundle that's 500KB-2MB into Node's heap before sending. Multiple concurrent canvas tabs = proportional memory spike.
+**Learning:** Use `Readable.fromWeb(response.body).pipe(res)` to stream the fetch Response's body directly to the Express response. Memory stays flat regardless of asset size. Forward `Cache-Control` from upstream so the browser caches properly. Node 18+ has `Readable.fromWeb` built in — no extra deps.
+**Why it matters:** Any proxy server should stream by default. `arrayBuffer()` / `text()` are convenient but make peak memory proportional to response size. The streaming version is barely more code.
+**Related:** cli/src/server.ts
+
+### [2026-05-19] Cache filesystem-scan results on disk to skip startup work
+**Context:** `injectScript` scanned monorepo `apps/*/` + `packages/*/` for HTML entry points and Next.js layout files on every startup. Up to 40-80 sync `fs.existsSync` + `fs.statSync` + `fs.readdirSync` calls before the canvas server bound.
+**Learning:** Once you've found the injection target, write the result to `.mappd/injection.json`. On next startup, read the cache, validate the paths still exist, fall through to a fresh scan only if invalid. Two-line guard at the top of the function. For monorepos with 10+ packages, this drops startup time from "noticeable" to "instant."
+**Why it matters:** Repeated work in the startup critical path adds friction users feel every time they run the tool. Any expensive scan whose result rarely changes is a candidate for disk caching with a cheap validity check.
+**Related:** cli/src/commands/dev.ts
+
+### [2026-05-19] Parallel `Promise.all` over sequential awaits for independent probes
+**Context:** `detect-port.ts` probed 7-10 candidate ports sequentially with 1s timeouts each. Worst case = 10s of startup blocked on port detection.
+**Learning:** Probes are independent — no need for sequential awaits. Wrap in `Promise.all(ports.map(async (p) => ({ port: p, alive: await isPortResponding(p) })))`, then `find` the first alive in priority order. Total wall time = the slowest single probe (~1s), not the sum. Pattern applies to any "check N things and act on first match" loop.
+**Why it matters:** Sequential `await` in loops is one of the most common perf bugs in async Node code. The author isn't doing anything wrong syntactically — `for` + `await` reads naturally — but the runtime is forced to serialize. When the operations are independent, `Promise.all` (or `Promise.allSettled`) is essentially free perf.
+**Related:** cli/src/detect-port.ts
+
 ### [2026-03-29] ERR_INSUFFICIENT_RESOURCES with 122 iframes — large app scaling limit
 **Context:** Ran Mappd on actual-budget (122 routes). Browser crashed with `net::ERR_INSUFFICIENT_RESOURCES`.
 **Learning:** Each iframe fires dozens of Vite module requests. 122 × 50+ modules = 6000+ concurrent HTTP requests. Fix: apps with 30+ routes only load iframes on click, not auto on zoom. Queue concurrency reduced from 4 to 2.
