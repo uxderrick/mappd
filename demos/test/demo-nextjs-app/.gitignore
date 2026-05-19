@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Mappd (auto-added)
+.mappd/
+public/mappd-inject.js
+mappd-inject.js

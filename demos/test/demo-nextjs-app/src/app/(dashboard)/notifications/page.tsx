@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { Badge } from "@/ui/badge";
+import { cn } from "@/lib/utils";
 
-// 25 notifications for scroll testing
 const notifications = Array.from({ length: 25 }, (_, i) => ({
   id: i + 1,
   message: [
@@ -18,50 +19,48 @@ const notifications = Array.from({ length: 25 }, (_, i) => ({
   userId: (i % 5) + 1,
   time: i < 3 ? `${(i + 1) * 5} min ago` : i < 10 ? `${i} hours ago` : `${i - 9} days ago`,
   read: i >= 4,
+  type: (["info", "success", "warning", "error"] as const)[i % 4],
 }));
 
 export default function NotificationsPage() {
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-        <h1 style={{ fontSize: "1.5rem", fontWeight: 700, margin: 0 }}>Notifications</h1>
-        <span style={{ fontSize: "0.8rem", color: "var(--muted)" }}>{unreadCount} unread</span>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold text-primary">Notifications</h1>
+          <p className="text-xs text-tertiary mt-0.5">{unreadCount} unread</p>
+        </div>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-        {notifications.map((notification) => (
+      <div className="space-y-2">
+        {notifications.map((n) => (
           <Link
-            key={notification.id}
-            href={`/users/${notification.userId}`}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              padding: "16px",
-              border: "1px solid var(--border)",
-              borderRadius: "8px",
-              background: notification.read ? "var(--card-bg)" : "var(--active-bg)",
-              opacity: notification.read ? 0.7 : 1,
-            }}
+            key={n.id}
+            href={`/users/${n.userId}`}
+            className={cn(
+              "flex items-center justify-between p-3 rounded-lg border transition-colors",
+              n.read
+                ? "border-surface-border-subtle bg-surface-card opacity-60 hover:opacity-80"
+                : "border-surface-border bg-surface-raised hover:bg-surface-hover/50",
+            )}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              {!notification.read && (
-                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "var(--primary)", flexShrink: 0 }} />
-              )}
-              <p style={{ fontWeight: notification.read ? 400 : 500, margin: 0 }}>{notification.message}</p>
+            <div className="flex items-center gap-3">
+              {!n.read && <span className="w-2 h-2 rounded-full bg-brand shrink-0" />}
+              <p className={cn("text-sm", n.read ? "text-secondary" : "text-primary font-medium")}>
+                {n.message}
+              </p>
             </div>
-            <span style={{ fontSize: "0.8rem", color: "var(--muted)", whiteSpace: "nowrap", marginLeft: "16px" }}>
-              {notification.time}
-            </span>
+            <div className="flex items-center gap-3 shrink-0 ml-4">
+              <Badge variant={n.type}>{n.type}</Badge>
+              <span className="text-xs text-tertiary whitespace-nowrap">{n.time}</span>
+            </div>
           </Link>
         ))}
       </div>
 
-      <div style={{ textAlign: "center", padding: "24px 0", color: "var(--muted)", fontSize: "0.85rem" }}>
-        End of notifications
-      </div>
+      <p className="text-center text-xs text-tertiary py-4">End of notifications</p>
     </div>
   );
 }

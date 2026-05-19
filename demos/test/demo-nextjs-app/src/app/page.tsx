@@ -1,68 +1,23 @@
 import Link from "next/link";
+import { Button } from "@/ui/button";
 
 export default function Home() {
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "calc(100vh - 60px)",
-        padding: "48px 24px",
-        textAlign: "center",
-      }}
-    >
-      <h1
-        style={{
-          fontSize: "3rem",
-          fontWeight: 800,
-          marginBottom: "16px",
-          lineHeight: 1.1,
-        }}
-      >
-        Navigate your app
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-var(--dm-header-height))] px-6 text-center">
+      <h1 className="text-4xl font-bold text-primary leading-tight max-w-xl">
+        Build faster with
         <br />
-        <span style={{ color: "var(--primary)" }}>with confidence</span>
+        <span className="text-brand">Acme Platform</span>
       </h1>
-      <p
-        style={{
-          fontSize: "1.25rem",
-          color: "var(--muted)",
-          maxWidth: "560px",
-          marginBottom: "32px",
-          lineHeight: 1.6,
-        }}
-      >
-        Mappd gives you a visual map of every route, layout, and navigation
-        pattern in your Next.js app. Understand your app at a glance.
+      <p className="text-lg text-secondary max-w-md mt-4 leading-relaxed">
+        The modern dashboard for teams who ship. Analytics, user management, and billing in one place.
       </p>
-      <div style={{ display: "flex", gap: "16px" }}>
-        <Link
-          href="/login"
-          style={{
-            background: "var(--primary)",
-            color: "#fff",
-            padding: "12px 28px",
-            borderRadius: "8px",
-            fontWeight: 600,
-            fontSize: "1rem",
-          }}
-        >
-          Get Started
+      <div className="flex gap-3 mt-8">
+        <Link href="/login">
+          <Button variant="primary" size="lg">Get Started</Button>
         </Link>
-        <Link
-          href="/about"
-          style={{
-            border: "1px solid var(--border)",
-            padding: "12px 28px",
-            borderRadius: "8px",
-            fontWeight: 600,
-            fontSize: "1rem",
-            color: "var(--foreground)",
-          }}
-        >
-          Learn More
+        <Link href="/about">
+          <Button variant="outline" size="lg">Learn More</Button>
         </Link>
       </div>
     </div>

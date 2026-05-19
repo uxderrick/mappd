@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Input } from "@/ui/input";
+import { Button } from "@/ui/button";
+import { Card } from "@/ui/card";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,111 +15,41 @@ export default function LoginPage() {
     e.preventDefault();
     console.log("Login attempt:", { username });
     localStorage.setItem("user", JSON.stringify({ username, loggedIn: true }));
-    localStorage.setItem("loginTimestamp", new Date().toISOString());
     router.push("/");
   }
 
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "calc(100vh - 60px)",
-        padding: "24px",
-      }}
-    >
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          width: "100%",
-          maxWidth: "400px",
-          padding: "32px",
-          border: "1px solid var(--border)",
-          borderRadius: "12px",
-          background: "var(--card-bg)",
-        }}
-      >
-        <h1 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "8px" }}>
-          Welcome back
-        </h1>
-        <p style={{ color: "var(--muted)", marginBottom: "24px" }}>
-          Sign in to your account
-        </p>
-
-        <label
-          style={{
-            display: "block",
-            marginBottom: "4px",
-            fontWeight: 500,
-            fontSize: "0.875rem",
-          }}
-        >
-          Username
-        </label>
-        <input
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Enter your username"
-          required
-          style={{
-            width: "100%",
-            padding: "10px 12px",
-            border: "1px solid var(--border)",
-            borderRadius: "6px",
-            marginBottom: "16px",
-            fontSize: "1rem",
-            background: "var(--background)",
-            color: "var(--foreground)",
-          }}
-        />
-
-        <label
-          style={{
-            display: "block",
-            marginBottom: "4px",
-            fontWeight: 500,
-            fontSize: "0.875rem",
-          }}
-        >
-          Password
-        </label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Enter your password"
-          required
-          style={{
-            width: "100%",
-            padding: "10px 12px",
-            border: "1px solid var(--border)",
-            borderRadius: "6px",
-            marginBottom: "24px",
-            fontSize: "1rem",
-            background: "var(--background)",
-            color: "var(--foreground)",
-          }}
-        />
-
-        <button
-          type="submit"
-          style={{
-            width: "100%",
-            padding: "12px",
-            background: "var(--primary)",
-            color: "#fff",
-            border: "none",
-            borderRadius: "6px",
-            fontSize: "1rem",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-        >
-          Sign In
-        </button>
-      </form>
+    <div className="flex items-center justify-center min-h-[calc(100vh-var(--dm-header-height))] px-6">
+      <Card.Root className="w-full max-w-sm">
+        <Card.Header>
+          <Card.Title className="text-lg">Welcome back</Card.Title>
+          <Card.Description>Sign in to your account</Card.Description>
+        </Card.Header>
+        <Card.Content>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              label="Username"
+              id="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Enter your username"
+              required
+            />
+            <Input
+              label="Password"
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              required
+            />
+            <Button variant="primary" className="w-full" type="submit">
+              Sign In
+            </Button>
+          </form>
+        </Card.Content>
+      </Card.Root>
     </div>
   );
 }

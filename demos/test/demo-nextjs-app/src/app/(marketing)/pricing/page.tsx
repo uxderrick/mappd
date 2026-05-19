@@ -1,175 +1,77 @@
 import Link from "next/link";
+import { Button } from "@/ui/button";
+import { cn } from "@/lib/utils";
 
 const tiers = [
   {
     name: "Free",
     price: "$0",
     period: "forever",
-    description: "Perfect for side projects and exploring Mappd.",
-    features: [
-      "Up to 20 routes",
-      "Basic route visualization",
-      "File structure scanning",
-      "Community support",
-    ],
-    cta: "Get Started",
+    description: "Perfect for side projects and exploring.",
+    features: ["Up to 3 users", "Basic analytics", "Community support", "1 GB storage"],
     highlighted: false,
   },
   {
     name: "Pro",
-    price: "$12",
+    price: "$29",
     period: "per month",
-    description: "For professional developers and growing apps.",
-    features: [
-      "Unlimited routes",
-      "Interactive route graph",
-      "Navigation pattern detection",
-      "Real-time updates",
-      "Layout & route group analysis",
-      "Priority support",
-    ],
-    cta: "Start Free Trial",
+    description: "For growing teams and serious projects.",
+    features: ["Up to 25 users", "Advanced analytics", "Priority support", "50 GB storage", "API access", "Custom integrations"],
     highlighted: true,
   },
   {
-    name: "Team",
-    price: "$29",
+    name: "Enterprise",
+    price: "$99",
     period: "per month",
-    description: "For teams collaborating on large applications.",
-    features: [
-      "Everything in Pro",
-      "Team sharing & collaboration",
-      "Route change history",
-      "CI/CD integration",
-      "Custom export formats",
-      "Dedicated support",
-    ],
-    cta: "Contact Sales",
+    description: "For organizations with advanced needs.",
+    features: ["Unlimited users", "Custom analytics", "Dedicated support", "Unlimited storage", "SSO & SAML", "SLA guarantee"],
     highlighted: false,
   },
 ];
 
 export default function PricingPage() {
   return (
-    <div style={{ padding: "48px 24px", textAlign: "center" }}>
-      <h1 style={{ fontSize: "2rem", fontWeight: 800, marginBottom: "8px" }}>
-        Simple, Transparent Pricing
-      </h1>
-      <p
-        style={{
-          fontSize: "1.125rem",
-          color: "var(--muted)",
-          marginBottom: "40px",
-        }}
-      >
-        Choose the plan that fits your project.
-      </p>
+    <div className="px-6 py-12 text-center">
+      <h1 className="text-2xl font-bold text-primary">Simple Pricing</h1>
+      <p className="text-base text-secondary mt-2">Choose the plan that fits your team.</p>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          gap: "24px",
-          maxWidth: "960px",
-          margin: "0 auto",
-        }}
-      >
+      <div className="grid grid-cols-3 gap-6 max-w-4xl mx-auto mt-10">
         {tiers.map((tier) => (
           <div
             key={tier.name}
-            style={{
-              padding: "32px 24px",
-              border: tier.highlighted
-                ? "2px solid var(--primary)"
-                : "1px solid var(--border)",
-              borderRadius: "12px",
-              background: "var(--card-bg)",
-              textAlign: "left",
-              position: "relative",
-            }}
+            className={cn(
+              "rounded-xl p-6 text-left relative",
+              tier.highlighted
+                ? "bg-surface-card border-2 border-brand"
+                : "bg-surface-card border border-surface-border",
+            )}
           >
             {tier.highlighted && (
-              <span
-                style={{
-                  position: "absolute",
-                  top: "-12px",
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  background: "var(--primary)",
-                  color: "#fff",
-                  padding: "2px 12px",
-                  borderRadius: "12px",
-                  fontSize: "0.75rem",
-                  fontWeight: 600,
-                }}
-              >
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand text-on-brand px-3 py-0.5 rounded-full text-[11px] font-semibold">
                 Most Popular
               </span>
             )}
-            <h2 style={{ fontSize: "1.25rem", fontWeight: 700 }}>
-              {tier.name}
-            </h2>
-            <div style={{ marginTop: "8px", marginBottom: "8px" }}>
-              <span style={{ fontSize: "2rem", fontWeight: 800 }}>
-                {tier.price}
-              </span>
-              <span
-                style={{
-                  fontSize: "0.9rem",
-                  color: "var(--muted)",
-                  marginLeft: "4px",
-                }}
-              >
-                {tier.period}
-              </span>
+            <h2 className="text-lg font-semibold text-primary">{tier.name}</h2>
+            <div className="mt-2">
+              <span className="text-3xl font-bold text-primary">{tier.price}</span>
+              <span className="text-sm text-tertiary ml-1">{tier.period}</span>
             </div>
-            <p
-              style={{
-                color: "var(--muted)",
-                fontSize: "0.9rem",
-                marginBottom: "20px",
-                lineHeight: 1.5,
-              }}
-            >
-              {tier.description}
-            </p>
-            <ul
-              style={{
-                listStyle: "none",
-                padding: 0,
-                marginBottom: "24px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "8px",
-              }}
-            >
-              {tier.features.map((feature) => (
-                <li
-                  key={feature}
-                  style={{ fontSize: "0.9rem", color: "var(--foreground)" }}
-                >
-                  &#10003; {feature}
+            <p className="text-sm text-secondary mt-2 leading-relaxed">{tier.description}</p>
+            <ul className="mt-5 space-y-2">
+              {tier.features.map((f) => (
+                <li key={f} className="text-sm text-secondary flex items-center gap-2">
+                  <span className="text-success text-xs">&#10003;</span> {f}
                 </li>
               ))}
             </ul>
-            <Link
-              href="/login"
-              style={{
-                display: "block",
-                textAlign: "center",
-                padding: "10px 20px",
-                borderRadius: "6px",
-                fontWeight: 600,
-                background: tier.highlighted
-                  ? "var(--primary)"
-                  : "transparent",
-                color: tier.highlighted ? "#fff" : "var(--primary)",
-                border: tier.highlighted
-                  ? "none"
-                  : "1px solid var(--primary)",
-              }}
-            >
-              {tier.cta}
+            <Link href="/login" className="block mt-6">
+              <Button
+                variant={tier.highlighted ? "primary" : "outline"}
+                className="w-full"
+                size="md"
+              >
+                {tier.highlighted ? "Start Free Trial" : "Get Started"}
+              </Button>
             </Link>
           </div>
         ))}

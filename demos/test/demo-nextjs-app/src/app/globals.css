@@ -1,69 +1,211 @@
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --border: #e5e7eb;
-  --muted: #6b7280;
-  --card-bg: #f9fafb;
-  --sidebar-bg: #f3f4f6;
-  --active-bg: #dbeafe;
-  --success: #16a34a;
-  --warning: #d97706;
-  --danger: #dc2626;
+@import "tailwindcss";
+
+/* ==================== Tailwind v4 Theme — Animations ==================== */
+
+@theme {
+  --animate-fade-in-up: fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-fade-in-scale: fade-in-scale 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-card-in: card-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-modal-enter: modal-enter 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  --animate-modal-exit: modal-exit 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-skeleton-pulse: skeleton-pulse 1.5s ease-in-out infinite;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --primary: #3b82f6;
-    --primary-hover: #60a5fa;
-    --border: #374151;
-    --muted: #9ca3af;
-    --card-bg: #1f2937;
-    --sidebar-bg: #111827;
-    --active-bg: #1e3a5f;
-    --success: #22c55e;
-    --warning: #f59e0b;
-    --danger: #ef4444;
+/* ==================== Semantic Tokens → Tailwind utilities ==================== */
+
+@theme inline {
+  /* Surfaces */
+  --color-surface-base: var(--dm-surface-base);
+  --color-surface-raised: var(--dm-surface-raised);
+  --color-surface-card: var(--dm-surface-card);
+  --color-surface-overlay: var(--dm-surface-overlay);
+  --color-surface-input: var(--dm-surface-input);
+  --color-surface-hover: var(--dm-surface-hover);
+  --color-surface-border: var(--dm-surface-border);
+  --color-surface-border-subtle: var(--dm-surface-border-subtle);
+
+  /* Text */
+  --color-primary: var(--dm-text-primary);
+  --color-secondary: var(--dm-text-secondary);
+  --color-tertiary: var(--dm-text-tertiary);
+  --color-inverse: var(--dm-text-inverse);
+  --color-on-brand: var(--dm-text-on-brand);
+
+  /* Brand */
+  --color-brand: var(--dm-brand);
+  --color-brand-hover: var(--dm-brand-hover);
+
+  /* Status */
+  --color-success: var(--dm-success);
+  --color-error: var(--dm-error);
+  --color-warning: var(--dm-warning);
+
+  /* Badges */
+  --color-badge-green: var(--dm-badge-green);
+  --color-badge-green-bg: var(--dm-badge-green-bg);
+  --color-badge-amber: var(--dm-badge-amber);
+  --color-badge-amber-bg: var(--dm-badge-amber-bg);
+  --color-badge-red: var(--dm-badge-red);
+  --color-badge-red-bg: var(--dm-badge-red-bg);
+  --color-badge-blue: var(--dm-badge-blue);
+  --color-badge-blue-bg: var(--dm-badge-blue-bg);
+
+  /* Font */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+@layer base {
+  *, *::before, *::after {
+    border-color: var(--dm-surface-border-subtle);
+  }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-surface-base text-primary font-sans;
+  }
+
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: none;
   }
 }
 
-html {
-  height: 100%;
+/* ==================== Design Tokens (dark-first) ==================== */
+
+:root {
+  --dm-brand: #3b82f6;
+  --dm-brand-hover: #2563eb;
+
+  --dm-surface-base: #09090b;
+  --dm-surface-raised: #131316;
+  --dm-surface-card: #18181b;
+  --dm-surface-overlay: #1e1e22;
+  --dm-surface-input: #111114;
+  --dm-surface-hover: #242429;
+  --dm-surface-border: #27272a;
+  --dm-surface-border-subtle: #1c1c1f;
+
+  --dm-text-primary: #fafafa;
+  --dm-text-secondary: #a1a1aa;
+  --dm-text-tertiary: #71717a;
+  --dm-text-inverse: #09090b;
+  --dm-text-on-brand: #ffffff;
+
+  --dm-success: #4ade80;
+  --dm-error: #f87171;
+  --dm-warning: #fbbf24;
+
+  --dm-badge-green: #86efac;
+  --dm-badge-green-bg: rgba(74, 222, 128, 0.12);
+  --dm-badge-amber: #fcd34d;
+  --dm-badge-amber-bg: rgba(251, 191, 36, 0.12);
+  --dm-badge-red: #fca5a5;
+  --dm-badge-red-bg: rgba(248, 113, 113, 0.12);
+  --dm-badge-blue: #93c5fd;
+  --dm-badge-blue-bg: rgba(96, 165, 250, 0.12);
+
+  /* Easing */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-snap: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Layout */
+  --dm-sidebar-width: 14rem;
+  --dm-header-height: 3.25rem;
 }
 
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
+/* ==================== Light Theme ==================== */
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --dm-surface-base: #f8f8f8;
+    --dm-surface-raised: #f0f0f0;
+    --dm-surface-card: #ffffff;
+    --dm-surface-overlay: #e8e8e8;
+    --dm-surface-input: #ffffff;
+    --dm-surface-hover: #dcdcdc;
+    --dm-surface-border: #d4d4d8;
+    --dm-surface-border-subtle: #e4e4e7;
+
+    --dm-text-primary: #18181b;
+    --dm-text-secondary: #52525b;
+    --dm-text-tertiary: #71717a;
+    --dm-text-inverse: #fafafa;
+    --dm-text-on-brand: #ffffff;
+
+    --dm-brand: #2563eb;
+    --dm-brand-hover: #1d4ed8;
+
+    --dm-success: #16a34a;
+    --dm-error: #dc2626;
+    --dm-warning: #d97706;
+
+    --dm-badge-green: #15803d;
+    --dm-badge-green-bg: rgba(22, 163, 74, 0.10);
+    --dm-badge-amber: #b45309;
+    --dm-badge-amber-bg: rgba(180, 83, 9, 0.10);
+    --dm-badge-red: #b91c1c;
+    --dm-badge-red-bg: rgba(220, 38, 38, 0.10);
+    --dm-badge-blue: #2563eb;
+    --dm-badge-blue-bg: rgba(37, 99, 235, 0.10);
+  }
 }
 
-body {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* ==================== Keyframe Animations ==================== */
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+@keyframes fade-in-scale {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+@keyframes modal-enter {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes modal-exit {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.95); }
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+/* ==================== Scrollbar ==================== */
+
+::-webkit-scrollbar { width: 0.375rem; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--dm-surface-border); border-radius: 99rem; }
+::-webkit-scrollbar-thumb:hover { background: var(--dm-text-tertiary); }
+
+/* ==================== Reduced Motion ==================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

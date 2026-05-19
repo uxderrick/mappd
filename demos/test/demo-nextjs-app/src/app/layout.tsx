@@ -1,88 +1,48 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "Mappd Demo App",
-  description: "A Next.js App Router demo for Mappd DevTools",
+  title: "Acme Dashboard",
+  description: "A Next.js App Router demo for Mappd",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="en">
       <body>
-        <nav
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "12px 24px",
-            borderBottom: "1px solid var(--border)",
-            background: "var(--background)",
-            position: "sticky",
-            top: 0,
-            zIndex: 100,
+        {/* Dev-only: unregister any stale service workers left over from previous apps on this port */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister()})}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k)})}).catch(function(){})}}`,
           }}
-        >
-          <Link
-            href="/"
-            style={{
-              fontWeight: 700,
-              fontSize: "1.125rem",
-              color: "var(--primary)",
-            }}
-          >
-            Mappd Demo
+        />
+        <nav className="flex items-center justify-between px-6 h-[var(--dm-header-height)] border-b border-surface-border bg-surface-base sticky top-0 z-50">
+          <Link href="/" className="font-bold text-lg text-brand">
+            Acme
           </Link>
-          <div style={{ display: "flex", gap: "24px", alignItems: "center" }}>
-            <Link
-              href="/"
-              style={{ color: "var(--foreground)", fontWeight: 500 }}
-            >
+          <div className="flex items-center gap-6">
+            <Link href="/" className="text-sm font-medium text-secondary hover:text-primary transition-colors">
               Home
             </Link>
-            <Link
-              href="/about"
-              style={{ color: "var(--foreground)", fontWeight: 500 }}
-            >
+            <Link href="/about" className="text-sm font-medium text-secondary hover:text-primary transition-colors">
               About
             </Link>
-            <Link
-              href="/pricing"
-              style={{ color: "var(--foreground)", fontWeight: 500 }}
-            >
+            <Link href="/pricing" className="text-sm font-medium text-secondary hover:text-primary transition-colors">
               Pricing
+            </Link>
+            <Link href="/contact" className="text-sm font-medium text-secondary hover:text-primary transition-colors">
+              Contact
             </Link>
             <Link
               href="/login"
-              style={{
-                color: "#fff",
-                background: "var(--primary)",
-                padding: "6px 16px",
-                borderRadius: "6px",
-                fontWeight: 500,
-              }}
+              className="h-8 px-4 rounded-lg text-xs font-semibold bg-brand text-on-brand hover:bg-brand-hover transition-all inline-flex items-center"
             >
-              Login
+              Sign In
             </Link>
           </div>
         </nav>
-        <main style={{ flex: 1 }}>{children}</main>
+        <main className="flex-1">{children}</main>
       </body>
     </html>
   );

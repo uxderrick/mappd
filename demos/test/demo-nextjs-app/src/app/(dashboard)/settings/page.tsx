@@ -1,275 +1,109 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { Tabs } from "@/ui/tabs";
+import { Input } from "@/ui/input";
+import { Button } from "@/ui/button";
+import { Card } from "@/ui/card";
 
-type Tab = "general" | "notifications" | "security";
-
-const tabs: { key: Tab; label: string }[] = [
+const settingsTabs = [
   { key: "general", label: "General" },
   { key: "notifications", label: "Notifications" },
   { key: "security", label: "Security" },
 ];
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<string>("general");
-
-  useEffect(() => {
-    console.log("Settings tab switched to:", activeTab);
-
-    fetch(`https://jsonplaceholder.typicode.com/users/1`)
-      .then((res) => res.json())
-      .then((data) => {
-        console.log(`Settings data for ${activeTab} tab:`, data.name);
-      })
-      .catch((err) => {
-        console.error("Failed to fetch settings data:", err);
-      });
-  }, [activeTab]);
-
-  function handleTabChange(tab: Tab) {
-    setActiveTab(tab);
-  }
+  const [activeTab, setActiveTab] = useState("general");
 
   return (
-    <div>
-      <h1
-        style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "24px" }}
-      >
-        Settings
-      </h1>
-
-      {/* Tabs */}
-      <div
-        style={{
-          display: "flex",
-          gap: "4px",
-          borderBottom: "1px solid var(--border)",
-          marginBottom: "24px",
-        }}
-      >
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => handleTabChange(tab.key)}
-            style={{
-              padding: "8px 16px",
-              border: "none",
-              borderBottom:
-                activeTab === tab.key
-                  ? "2px solid var(--primary)"
-                  : "2px solid transparent",
-              background: "transparent",
-              color:
-                activeTab === tab.key ? "var(--primary)" : "var(--muted)",
-              fontWeight: activeTab === tab.key ? 600 : 400,
-              cursor: "pointer",
-              fontSize: "0.9rem",
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
+    <div className="space-y-4 max-w-2xl">
+      <div>
+        <h1 className="text-lg font-semibold text-primary">Settings</h1>
+        <p className="text-xs text-tertiary mt-0.5">Manage your account preferences</p>
       </div>
 
-      {/* Tab Content */}
+      <Tabs tabs={settingsTabs} activeTab={activeTab} onTabChange={setActiveTab} />
+
       {activeTab === "general" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          <div>
-            <label
-              style={{
-                display: "block",
-                fontWeight: 500,
-                marginBottom: "4px",
-                fontSize: "0.875rem",
-              }}
-            >
-              Display Name
-            </label>
-            <input
-              type="text"
-              defaultValue="Derrick Tsorme"
-              style={{
-                width: "100%",
-                maxWidth: "400px",
-                padding: "10px 12px",
-                border: "1px solid var(--border)",
-                borderRadius: "6px",
-                fontSize: "1rem",
-                background: "var(--background)",
-                color: "var(--foreground)",
-              }}
-            />
-          </div>
-          <div>
-            <label
-              style={{
-                display: "block",
-                fontWeight: 500,
-                marginBottom: "4px",
-                fontSize: "0.875rem",
-              }}
-            >
-              Email
-            </label>
-            <input
-              type="email"
-              defaultValue="derrick@example.com"
-              style={{
-                width: "100%",
-                maxWidth: "400px",
-                padding: "10px 12px",
-                border: "1px solid var(--border)",
-                borderRadius: "6px",
-                fontSize: "1rem",
-                background: "var(--background)",
-                color: "var(--foreground)",
-              }}
-            />
-          </div>
-          <div>
-            <label
-              style={{
-                display: "block",
-                fontWeight: 500,
-                marginBottom: "4px",
-                fontSize: "0.875rem",
-              }}
-            >
-              Timezone
-            </label>
-            <select
-              defaultValue="UTC"
-              style={{
-                width: "100%",
-                maxWidth: "400px",
-                padding: "10px 12px",
-                border: "1px solid var(--border)",
-                borderRadius: "6px",
-                fontSize: "1rem",
-                background: "var(--background)",
-                color: "var(--foreground)",
-              }}
-            >
-              <option value="UTC">UTC</option>
-              <option value="EST">Eastern Time</option>
-              <option value="PST">Pacific Time</option>
-              <option value="GMT">GMT</option>
-            </select>
-          </div>
-        </div>
+        <Card.Root>
+          <Card.Header>
+            <Card.Title>Profile</Card.Title>
+            <Card.Description>Your personal information</Card.Description>
+          </Card.Header>
+          <Card.Content>
+            <div className="space-y-4">
+              <Input label="Display Name" id="name" defaultValue="Derrick Tsorme" />
+              <Input label="Email" id="email" type="email" defaultValue="derrick@acme.com" />
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="tz" className="text-xs font-medium text-secondary">Timezone</label>
+                <select
+                  id="tz"
+                  defaultValue="UTC"
+                  className="w-full h-9 rounded-lg border px-3 text-sm outline-none transition-all bg-surface-input border-surface-border text-primary focus-visible:border-brand focus-visible:ring-[3px] focus-visible:ring-brand/30"
+                >
+                  <option value="UTC">UTC</option>
+                  <option value="EST">Eastern Time</option>
+                  <option value="PST">Pacific Time</option>
+                  <option value="GMT">GMT</option>
+                </select>
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button variant="primary" size="sm">Save Changes</Button>
+              </div>
+            </div>
+          </Card.Content>
+        </Card.Root>
       )}
 
       {activeTab === "notifications" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          {[
-            { label: "Email notifications", description: "Receive email updates for important events" },
-            { label: "Push notifications", description: "Get push notifications on your device" },
-            { label: "Weekly digest", description: "Receive a weekly summary of activity" },
-          ].map((item) => (
-            <div
-              key={item.label}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                padding: "16px",
-                border: "1px solid var(--border)",
-                borderRadius: "8px",
-                background: "var(--card-bg)",
-              }}
-            >
-              <div>
-                <p style={{ fontWeight: 500 }}>{item.label}</p>
-                <p style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
-                  {item.description}
-                </p>
-              </div>
-              <input type="checkbox" defaultChecked style={{ width: "18px", height: "18px" }} />
+        <Card.Root>
+          <Card.Header>
+            <Card.Title>Notifications</Card.Title>
+            <Card.Description>Choose what you want to be notified about</Card.Description>
+          </Card.Header>
+          <Card.Content>
+            <div className="space-y-3">
+              {[
+                { label: "Email notifications", desc: "Receive email updates for important events" },
+                { label: "Push notifications", desc: "Get push notifications on your device" },
+                { label: "Weekly digest", desc: "Receive a weekly summary of activity" },
+              ].map((item) => (
+                <div key={item.label} className="flex items-center justify-between p-3 rounded-lg border border-surface-border-subtle">
+                  <div>
+                    <p className="text-sm font-medium text-primary">{item.label}</p>
+                    <p className="text-xs text-tertiary">{item.desc}</p>
+                  </div>
+                  <input type="checkbox" defaultChecked className="w-4 h-4 accent-brand" />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </Card.Content>
+        </Card.Root>
       )}
 
       {activeTab === "security" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          <div>
-            <label
-              style={{
-                display: "block",
-                fontWeight: 500,
-                marginBottom: "4px",
-                fontSize: "0.875rem",
-              }}
-            >
-              Current Password
-            </label>
-            <input
-              type="password"
-              placeholder="Enter current password"
-              style={{
-                width: "100%",
-                maxWidth: "400px",
-                padding: "10px 12px",
-                border: "1px solid var(--border)",
-                borderRadius: "6px",
-                fontSize: "1rem",
-                background: "var(--background)",
-                color: "var(--foreground)",
-              }}
-            />
-          </div>
-          <div>
-            <label
-              style={{
-                display: "block",
-                fontWeight: 500,
-                marginBottom: "4px",
-                fontSize: "0.875rem",
-              }}
-            >
-              New Password
-            </label>
-            <input
-              type="password"
-              placeholder="Enter new password"
-              style={{
-                width: "100%",
-                maxWidth: "400px",
-                padding: "10px 12px",
-                border: "1px solid var(--border)",
-                borderRadius: "6px",
-                fontSize: "1rem",
-                background: "var(--background)",
-                color: "var(--foreground)",
-              }}
-            />
-          </div>
-          <div>
-            <label
-              style={{
-                display: "block",
-                fontWeight: 500,
-                marginBottom: "4px",
-                fontSize: "0.875rem",
-              }}
-            >
-              Two-Factor Authentication
-            </label>
-            <button
-              style={{
-                padding: "10px 20px",
-                border: "1px solid var(--border)",
-                borderRadius: "6px",
-                background: "var(--card-bg)",
-                color: "var(--foreground)",
-                cursor: "pointer",
-                fontWeight: 500,
-              }}
-            >
-              Enable 2FA
-            </button>
-          </div>
-        </div>
+        <Card.Root>
+          <Card.Header>
+            <Card.Title>Security</Card.Title>
+            <Card.Description>Manage your password and authentication</Card.Description>
+          </Card.Header>
+          <Card.Content>
+            <div className="space-y-4">
+              <Input label="Current Password" id="current-pw" type="password" placeholder="Enter current password" />
+              <Input label="New Password" id="new-pw" type="password" placeholder="Enter new password" />
+              <div className="flex items-center justify-between p-3 rounded-lg border border-surface-border-subtle">
+                <div>
+                  <p className="text-sm font-medium text-primary">Two-Factor Authentication</p>
+                  <p className="text-xs text-tertiary">Add an extra layer of security</p>
+                </div>
+                <Button variant="outline" size="sm">Enable 2FA</Button>
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button variant="primary" size="sm">Update Password</Button>
+              </div>
+            </div>
+          </Card.Content>
+        </Card.Root>
       )}
     </div>
   );

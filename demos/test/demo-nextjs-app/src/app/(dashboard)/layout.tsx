@@ -2,74 +2,64 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  Gear,
+  Users,
+  Bell,
+  House,
+  CreditCard,
+  ChartLine,
+} from "@phosphor-icons/react";
+import { cn } from "@/lib/utils";
 
-const sidebarLinks = [
-  { href: "/", label: "Dashboard", icon: "\u25A0" },
-  { href: "/settings", label: "Settings", icon: "\u2699" },
-  { href: "/users", label: "Users", icon: "\u263A" },
-  { href: "/notifications", label: "Notifications", icon: "\u266A" },
+const navItems = [
+  { href: "/", label: "Overview", icon: House },
+  { href: "/analytics", label: "Analytics", icon: ChartLine },
+  { href: "/users", label: "Users", icon: Users },
+  { href: "/billing", label: "Billing", icon: CreditCard },
+  { href: "/notifications", label: "Notifications", icon: Bell },
+  { href: "/settings", label: "Settings", icon: Gear },
 ];
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <div style={{ display: "flex", minHeight: "calc(100vh - 60px)" }}>
-      <aside
-        style={{
-          width: "240px",
-          background: "var(--sidebar-bg)",
-          borderRight: "1px solid var(--border)",
-          padding: "16px 12px",
-          flexShrink: 0,
-        }}
-      >
-        <p
-          style={{
-            fontSize: "0.75rem",
-            fontWeight: 600,
-            textTransform: "uppercase",
-            color: "var(--muted)",
-            marginBottom: "12px",
-            padding: "0 8px",
-          }}
-        >
-          Navigation
-        </p>
-        <nav style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-          {sidebarLinks.map((link) => {
+    <div className="flex h-[calc(100vh-var(--dm-header-height))]">
+      {/* Sidebar */}
+      <aside className="w-[var(--dm-sidebar-width)] shrink-0 border-r border-surface-border bg-surface-raised flex flex-col">
+        <div className="px-3 pt-4 pb-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-tertiary px-3">
+            Navigation
+          </p>
+        </div>
+        <nav className="flex flex-col gap-0.5 px-3 flex-1">
+          {navItems.map((item) => {
             const isActive =
-              pathname === link.href ||
-              (link.href !== "/" && pathname.startsWith(link.href));
-
+              pathname === item.href ||
+              (item.href !== "/" && pathname.startsWith(item.href));
+            const Icon = item.icon;
             return (
               <Link
-                key={link.href}
-                href={link.href}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  padding: "8px 12px",
-                  borderRadius: "6px",
-                  fontWeight: isActive ? 600 : 400,
-                  background: isActive ? "var(--active-bg)" : "transparent",
-                  color: isActive ? "var(--primary)" : "var(--foreground)",
-                  fontSize: "0.9rem",
-                }}
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150",
+                  isActive
+                    ? "bg-surface-hover text-primary font-semibold"
+                    : "text-secondary hover:bg-surface-hover/50 hover:text-primary",
+                )}
               >
-                <span>{link.icon}</span>
-                {link.label}
+                <Icon size={16} weight={isActive ? "fill" : "bold"} />
+                {item.label}
               </Link>
             );
           })}
         </nav>
       </aside>
-      <div style={{ flex: 1, padding: "24px" }}>{children}</div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-6">{children}</div>
     </div>
   );
 }
