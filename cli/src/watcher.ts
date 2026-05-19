@@ -1,4 +1,5 @@
 import chokidar from 'chokidar';
+import fs from 'node:fs';
 import path from 'node:path';
 
 const WATCH_EXTENSIONS = ['.tsx', '.ts', '.jsx', '.js'];
@@ -8,19 +9,28 @@ const IGNORE_PATTERNS = [
   '**/dist/**',
   '**/build/**',
   '**/.next/**',
+  '**/.turbo/**',
+  '**/.cache/**',
+  '**/.git/**',
+  '**/coverage/**',
 ];
 
 export function startWatcher(
   projectDir: string,
   onChange: (filePath: string) => void,
 ) {
-  // Watch src directory if it exists, otherwise project root
-  const watchDir = path.join(projectDir, 'src');
+  const srcDir = path.join(projectDir, 'src');
+  const appDir = path.join(projectDir, 'app');
+  let watchDir: string;
+  if (fs.existsSync(srcDir)) watchDir = srcDir;
+  else if (fs.existsSync(appDir)) watchDir = appDir;
+  else watchDir = projectDir;
 
   const watcher = chokidar.watch(watchDir, {
     ignored: IGNORE_PATTERNS,
     persistent: true,
     ignoreInitial: true,
+    depth: 8,
     awaitWriteFinish: {
       stabilityThreshold: 200,
       pollInterval: 50,

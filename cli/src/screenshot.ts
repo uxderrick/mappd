@@ -1,7 +1,7 @@
-import puppeteer, { type Browser } from 'puppeteer';
 import fs from 'node:fs';
 import path from 'node:path';
 import pc from 'picocolors';
+import type { Browser, Page } from 'puppeteer';
 import type { FlowGraph } from 'mappd-parser';
 
 interface ScreenshotOptions {
@@ -17,9 +17,23 @@ let sharedBrowser: Browser | null = null;
 
 async function getBrowser(): Promise<Browser> {
   if (!sharedBrowser || !sharedBrowser.connected) {
+    // Lazy-load puppeteer so dev runs without --screenshots never touch ~250MB of Chrome bindings.
+    const { default: puppeteer } = await import('puppeteer');
     sharedBrowser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-gpu',
+        '--disable-dev-shm-usage',
+        '--disable-extensions',
+        '--no-first-run',
+        '--disable-background-networking',
+        '--disable-background-timer-throttling',
+        '--disable-renderer-backgrounding',
+        '--disable-default-apps',
+        '--mute-audio',
+      ],
     });
   }
   return sharedBrowser;
@@ -52,18 +66,29 @@ export async function captureOnDemand(
   const page = await browser.newPage();
 
   try {
+    await blockHeavyRequests(page);
     await page.setViewport({ width, height });
     await page.goto(url, {
-      waitUntil: 'networkidle2',
-      timeout: 15000,
+      waitUntil: 'domcontentloaded',
+      timeout: 8000,
     });
-    // Wait for client-side rendering
-    await new Promise(resolve => setTimeout(resolve, 1000));
     const buffer = await page.screenshot({ type: 'png' });
     return Buffer.from(buffer);
   } finally {
     await page.close();
   }
+}
+
+async function blockHeavyRequests(page: Page): Promise<void> {
+  await page.setRequestInterception(true);
+  page.on('request', (req) => {
+    const type = req.resourceType();
+    if (type === 'image' || type === 'font' || type === 'media') {
+      req.abort();
+    } else {
+      req.continue();
+    }
+  });
 }
 
 /**
@@ -79,7 +104,7 @@ export async function captureScreenshots(
     outputDir,
     width = 1280,
     height = 800,
-    concurrency = 2,
+    concurrency = 1,
   } = options;
 
   const screenshotDir = path.join(outputDir, 'screenshots');
@@ -107,21 +132,22 @@ export async function captureScreenshots(
         const url = `http://localhost:${targetPort}${urlPath}`;
         const outputPath = path.join(screenshotDir, `${route.id}.png`);
 
+        const page = await browser.newPage();
         try {
-          const page = await browser.newPage();
+          await blockHeavyRequests(page);
           await page.setViewport({ width, height });
           await page.goto(url, {
-            waitUntil: 'networkidle2',
-            timeout: 15000,
+            waitUntil: 'domcontentloaded',
+            timeout: 8000,
           });
-          await new Promise(resolve => setTimeout(resolve, 1000));
           await page.screenshot({ path: outputPath, type: 'png' });
-          await page.close();
           console.log(pc.dim(`    Captured: ${route.routePath}`));
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           console.log(pc.yellow(`    Failed: ${route.routePath} — ${msg}`));
           createPlaceholder(outputPath);
+        } finally {
+          await page.close().catch(() => {});
         }
       }),
     );

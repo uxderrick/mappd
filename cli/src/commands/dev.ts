@@ -13,6 +13,7 @@ interface DevOptions {
   port: string;
   targetPort?: string;
   dir: string;
+  screenshots?: boolean;
 }
 
 export async function devCommand(options: DevOptions) {
@@ -106,7 +107,8 @@ export async function devCommand(options: DevOptions) {
   console.log('');
 
   // Step 5: Capture screenshots in background (doesn't block startup)
-  if (graph) {
+  // Opt-in to avoid spawning headless Chrome on every dev run.
+  if (graph && options.screenshots) {
     console.log(pc.dim('  Capturing screenshots...'));
     captureScreenshots(graph, {
       targetPort,
@@ -117,6 +119,8 @@ export async function devCommand(options: DevOptions) {
     }).catch((err) => {
       console.log(pc.yellow(`  Screenshot capture failed: ${err instanceof Error ? err.message : err}`));
     });
+  } else if (graph) {
+    console.log(pc.dim('  Screenshots disabled (pass --screenshots to enable)'));
   }
 
   // Graceful shutdown
@@ -150,6 +154,13 @@ interface Injection {
 function injectScript(projectDir: string, canvasDir: string): Injection | null {
   const scriptSrc = path.join(canvasDir, 'mappd-inject.js');
   if (!fs.existsSync(scriptSrc)) return null;
+
+  // Fast path: reuse cached injection target from a prior run (avoids 40-80 sync FS calls in monorepos).
+  const cached = readInjectionCache(projectDir);
+  if (cached) {
+    const result = applyCachedInjection(cached, scriptSrc, projectDir);
+    if (result) return result;
+  }
 
   // Build list of directories to search — project root + monorepo sub-packages
   const searchRoots = [projectDir];
@@ -206,7 +217,9 @@ function injectScript(projectDir: string, canvasDir: string): Injection | null {
       const original = fs.readFileSync(htmlPath, 'utf-8');
       if (original.includes('mappd-inject.js')) {
         console.log(pc.dim(`  Script already in ${path.relative(projectDir, htmlPath)}`));
-        return { scriptPath: scriptDst, htmlPath, htmlBackup: original };
+        const result: Injection = { scriptPath: scriptDst, htmlPath, htmlBackup: original };
+        writeInjectionCache(projectDir, result);
+        return result;
       }
 
       let modified: string;
@@ -220,7 +233,9 @@ function injectScript(projectDir: string, canvasDir: string): Injection | null {
 
       fs.writeFileSync(htmlPath, modified, 'utf-8');
       console.log(pc.dim(`  Injected script tag into ${path.relative(projectDir, htmlPath)}`));
-      return { scriptPath: scriptDst, htmlPath, htmlBackup: original };
+      const result: Injection = { scriptPath: scriptDst, htmlPath, htmlBackup: original };
+      writeInjectionCache(projectDir, result);
+      return result;
     }
   }
 
@@ -242,7 +257,9 @@ function injectScript(projectDir: string, canvasDir: string): Injection | null {
       const original = fs.readFileSync(layoutPath, 'utf-8');
       if (original.includes('mappd-inject.js')) {
         console.log(pc.dim(`  Script already in ${path.relative(projectDir, layoutPath)}`));
-        return { scriptPath: scriptDst, htmlPath: layoutPath, htmlBackup: original };
+        const result: Injection = { scriptPath: scriptDst, htmlPath: layoutPath, htmlBackup: original };
+        writeInjectionCache(projectDir, result);
+        return result;
       }
 
       let modified: string;
@@ -260,12 +277,88 @@ function injectScript(projectDir: string, canvasDir: string): Injection | null {
 
       fs.writeFileSync(layoutPath, modified, 'utf-8');
       console.log(pc.dim(`  Injected script tag into ${path.relative(projectDir, layoutPath)}`));
-      return { scriptPath: scriptDst, htmlPath: layoutPath, htmlBackup: original };
+      const result: Injection = { scriptPath: scriptDst, htmlPath: layoutPath, htmlBackup: original };
+      writeInjectionCache(projectDir, result);
+      return result;
     }
   }
 
   console.log(pc.dim(`  Copied mappd-inject.js to public/ (add <script src="/mappd-inject.js"></script> to your HTML manually)`));
-  return { scriptPath: scriptDst, htmlPath: null, htmlBackup: null };
+  const result: Injection = { scriptPath: scriptDst, htmlPath: null, htmlBackup: null };
+  writeInjectionCache(projectDir, result);
+  return result;
+}
+
+interface InjectionCache {
+  scriptPath: string;
+  htmlPath: string | null;
+}
+
+function injectionCachePath(projectDir: string): string {
+  return path.join(projectDir, '.mappd', 'injection.json');
+}
+
+function readInjectionCache(projectDir: string): InjectionCache | null {
+  try {
+    const raw = fs.readFileSync(injectionCachePath(projectDir), 'utf-8');
+    const parsed = JSON.parse(raw) as InjectionCache;
+    if (typeof parsed.scriptPath !== 'string') return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeInjectionCache(projectDir: string, injection: Injection): void {
+  try {
+    const dir = path.join(projectDir, '.mappd');
+    fs.mkdirSync(dir, { recursive: true });
+    const payload: InjectionCache = {
+      scriptPath: injection.scriptPath,
+      htmlPath: injection.htmlPath,
+    };
+    fs.writeFileSync(injectionCachePath(projectDir), JSON.stringify(payload, null, 2), 'utf-8');
+  } catch {}
+}
+
+function applyCachedInjection(
+  cache: InjectionCache,
+  scriptSrc: string,
+  projectDir: string,
+): Injection | null {
+  // Validate cached paths still exist; if not, fall through to fresh scan.
+  const publicDir = path.dirname(cache.scriptPath);
+  if (!fs.existsSync(publicDir)) return null;
+
+  fs.copyFileSync(scriptSrc, cache.scriptPath);
+
+  if (!cache.htmlPath) {
+    return { scriptPath: cache.scriptPath, htmlPath: null, htmlBackup: null };
+  }
+
+  if (!fs.existsSync(cache.htmlPath)) return null;
+
+  const original = fs.readFileSync(cache.htmlPath, 'utf-8');
+  if (original.includes('mappd-inject.js')) {
+    return { scriptPath: cache.scriptPath, htmlPath: cache.htmlPath, htmlBackup: original };
+  }
+
+  // Cached entry exists but was reverted (e.g., user shut down hard). Re-inject minimally.
+  const SCRIPT_TAG = '<script src="/mappd-inject.js"></script>';
+  let modified: string;
+  if (original.includes('</head>')) {
+    modified = original.replace('</head>', `  ${SCRIPT_TAG}\n  </head>`);
+  } else if (original.match(/<head[^>]*>/i)) {
+    const headMatch = original.match(/<head[^>]*>/i)!;
+    modified = original.replace(headMatch[0], `${headMatch[0]}\n        ${SCRIPT_TAG}`);
+  } else if (original.includes('<body>')) {
+    modified = original.replace('<body>', `<body>\n  ${SCRIPT_TAG}`);
+  } else {
+    return null;
+  }
+  fs.writeFileSync(cache.htmlPath, modified, 'utf-8');
+  console.log(pc.dim(`  Reused cached injection target: ${path.relative(projectDir, cache.htmlPath)}`));
+  return { scriptPath: cache.scriptPath, htmlPath: cache.htmlPath, htmlBackup: original };
 }
 
 /**

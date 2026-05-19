@@ -4,22 +4,44 @@ See your entire React app at once. Stop clicking through screens.
 
 Mappd renders every route in your application on an infinite canvas, connected by auto-detected navigation flows. It is a localhost dev tool for React developers who are tired of manually navigating through their apps to reach deep screens.
 
-<!-- TODO: Add screenshot/GIF of canvas -->
-<img width="3068" height="2096" alt="image" src="https://github.com/user-attachments/assets/fffb479e-c595-4a6b-a46b-f6d2e234113a" />
+<img width="3068" height="2096" alt="Mappd canvas showing a React app's routes" src="https://github.com/user-attachments/assets/fffb479e-c595-4a6b-a46b-f6d2e234113a" />
+
+---
+
+## Prerequisites
+
+- **Node.js 20 or later** (`node -v` to check)
+- A React project using **React Router** or **Next.js**
+- One of: **npm**, **pnpm**, or **yarn**
 
 ---
 
 ## Quick Start
 
+**Step 1 — Install Mappd globally**
+
 ```bash
 npm install -g mappd
+# or: pnpm add -g mappd
+# or: yarn global add mappd
+```
+
+**Step 2 — Start your app's dev server (in one terminal)**
+
+```bash
 cd your-react-project
+npm run dev
+```
+
+**Step 3 — Start Mappd (in another terminal, same project)**
+
+```bash
 mappd dev
 ```
 
-That's it. Mappd parses your routes, starts a canvas server, and opens your entire app on one screen.
+Open `http://localhost:3569` in your browser. You'll see every route in your app laid out on a canvas.
 
-Your app's dev server should already be running. Mappd auto-detects the port from your project config (Vite, Next.js, etc.).
+Mappd auto-detects which port your dev server is running on (Vite = 5173, Next.js = 3000, etc.). If detection fails, pass it manually: `mappd dev --target-port 3000`.
 
 ---
 
@@ -61,6 +83,7 @@ mappd dev [options]
 | `-p, --port <port>` | Canvas server port | `3569` |
 | `-t, --target-port <port>` | Your app's dev server port | Auto-detected |
 | `-d, --dir <path>` | Project directory | `.` |
+| `--screenshots` | Capture route screenshots on startup (launches headless Chrome) | `false` |
 
 **Examples:**
 
@@ -71,9 +94,82 @@ mappd dev
 # Custom ports
 mappd dev --port 3000 --target-port 8080
 
-# Point to a different project directory
-mappd dev --dir ./packages/web
+# Point to a different project directory (monorepos)
+mappd dev --dir ./apps/web
+
+# Capture route screenshots on startup
+mappd dev --screenshots
 ```
+
+---
+
+## Using the Canvas
+
+Once the canvas opens at `http://localhost:3569`:
+
+- **Pan** — drag empty space or use trackpad two-finger scroll
+- **Zoom** — pinch trackpad or `Cmd/Ctrl + scroll`
+- **Click a screen** — selects it and shows controls in the right panel
+- **Click a link inside a screen** — canvas pans to the destination screen instead of navigating away
+- **Focus mode** — click the expand icon on a node to enlarge it (great for forms and interaction testing)
+- **Pin state** — set auth tokens, URL params, or mock data so you can jump straight to deep screens
+- **Export** — save the canvas as a PNG or capture a single route as a screenshot
+
+Edit any file in your project and the canvas updates automatically — no refresh needed.
+
+---
+
+## Troubleshooting
+
+<details>
+<summary><strong>"Could not detect a running dev server"</strong></summary>
+
+Mappd couldn't find your app. Make sure your dev server is running, then pass the port explicitly:
+
+```bash
+mappd dev --target-port 3000
+```
+</details>
+
+<details>
+<summary><strong>"Port 3569 in use"</strong></summary>
+
+Mappd auto-increments to the next free port (3570, 3571, ...). Check the terminal output for the actual URL, or override:
+
+```bash
+mappd dev --port 4000
+```
+</details>
+
+<details>
+<summary><strong>Screenshots fail with "Could not find Chrome"</strong></summary>
+
+Puppeteer needs Chrome installed. Run:
+
+```bash
+npx puppeteer browsers install chrome
+```
+
+Or skip screenshots entirely — they're optional. Just don't pass `--screenshots`.
+</details>
+
+<details>
+<summary><strong>Canvas is blank or screens won't load</strong></summary>
+
+Open the browser console. The most common cause: your dev server is on a different port than Mappd detected. Pass `--target-port` explicitly.
+</details>
+
+<details>
+<summary><strong>Mappd crashed and left files behind</strong></summary>
+
+Delete `public/mappd-inject.js` from your project and remove any `<script src="/mappd-inject.js">` tag from your HTML entry (`index.html` or `app/layout.tsx`).
+</details>
+
+<details>
+<summary><strong>My laptop feels slow when Mappd is running</strong></summary>
+
+The biggest resource cost is your own dev server (Next.js Turbopack ≈ 450 MB, Vite ≈ 100 MB). Mappd itself uses ~80 MB. If screenshots are enabled, headless Chrome adds ~250 MB — drop the `--screenshots` flag to skip it.
+</details>
 
 ---
 

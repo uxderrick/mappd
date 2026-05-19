@@ -2,6 +2,7 @@ import express from 'express';
 import http from 'node:http';
 import path from 'node:path';
 import fs from 'node:fs';
+import { Readable } from 'node:stream';
 import { WebSocketServer, WebSocket } from 'ws';
 import pc from 'picocolors';
 import { captureOnDemand } from './screenshot.js';
@@ -32,24 +33,30 @@ export async function createServer(options: ServerOptions) {
   // Handle WSS errors (e.g. EADDRINUSE bubbles here too)
   wss.on('error', () => {});
 
-  // Serve flow-graph.json from .mappd directory
+  // In-memory cache for flow-graph.json — invalidated on broadcast('graph-update').
+  let graphCache: string | null = null;
   app.get('/flow-graph.json', (_req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    if (graphCache !== null) {
+      res.send(graphCache);
+      return;
+    }
     const graphPath = path.join(flowGraphDir, 'flow-graph.json');
     if (fs.existsSync(graphPath)) {
-      res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.sendFile(graphPath);
+      graphCache = fs.readFileSync(graphPath, 'utf-8');
+      res.send(graphCache);
     } else {
       res.status(404).json({ error: 'Flow graph not found. Parser may have failed.' });
     }
   });
 
-  // Serve screenshots from .mappd/screenshots/
+  // Serve screenshots from .mappd/screenshots/ — immutable between captures, cache short-term.
   app.get('/screenshots/:filename', (req, res) => {
     const screenshotPath = path.join(flowGraphDir, 'screenshots', req.params.filename);
     if (fs.existsSync(screenshotPath)) {
       res.setHeader('Content-Type', 'image/png');
-      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Cache-Control', 'public, max-age=60');
       res.sendFile(path.resolve(screenshotPath));
     } else {
       res.status(404).send('Screenshot not found');
@@ -205,8 +212,10 @@ window.location.replace("${targetUrl}");
         let html = await response.text();
         const targetOrigin = `http://localhost:${targetPort}`;
 
-        // Inject our script before </head> or </body>
-        const injectTag = `<script src="http://localhost:${port}/mappd-inject.js"></script>`;
+        // Inject our script before </head> or </body>. Use request host so the URL
+        // matches whatever port the canvas actually bound to (preferredPort may have been bumped).
+        const canvasHost = req.headers.host ?? `localhost:${preferredPort}`;
+        const injectTag = `<script src="http://${canvasHost}/mappd-inject.js"></script>`;
         if (html.includes('</head>')) {
           html = html.replace('</head>', injectTag + '</head>');
         } else if (html.includes('</body>')) {
@@ -229,10 +238,15 @@ window.location.replace("${targetUrl}");
         res.setHeader('Content-Type', 'text/html');
         res.send(html);
       } else {
-        // Non-HTML: pipe through as-is
+        // Non-HTML: stream through to avoid buffering large bundles into heap.
         res.setHeader('Content-Type', contentType);
-        const buffer = await response.arrayBuffer();
-        res.send(Buffer.from(buffer));
+        const cacheControl = response.headers.get('cache-control');
+        if (cacheControl) res.setHeader('Cache-Control', cacheControl);
+        if (response.body) {
+          Readable.fromWeb(response.body as any).pipe(res);
+        } else {
+          res.end();
+        }
       }
     } catch (err) {
       res.status(502).send(`Proxy error: ${err instanceof Error ? err.message : err}`);
@@ -294,6 +308,10 @@ window.location.replace("${targetUrl}");
   return {
     port: actualPort,
     broadcast(data: any) {
+      // Invalidate flow-graph cache when parser pushes a new graph.
+      if (data && data.type === 'graph-update') {
+        graphCache = null;
+      }
       const message = JSON.stringify(data);
       for (const client of clients) {
         if (client.readyState === WebSocket.OPEN) {

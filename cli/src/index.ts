@@ -14,6 +14,7 @@ program
   .option('-p, --port <port>', 'Canvas server port', '3569')
   .option('-t, --target-port <port>', 'Target app dev server port (auto-detected if omitted)')
   .option('-d, --dir <path>', 'Project directory', '.')
+  .option('--screenshots', 'Capture route screenshots on startup (launches headless Chrome)', false)
   .action(devCommand);
 
 program.parse();

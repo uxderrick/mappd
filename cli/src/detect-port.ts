@@ -100,22 +100,16 @@ export async function detectTargetPort(projectDir: string): Promise<number> {
     console.log(pc.dim(`  Detected ${framework.name} project`));
   }
 
-  for (const port of probePorts) {
-    const alive = await isPortResponding(port);
-    if (alive) {
-      console.log(pc.dim(`  Auto-detected target port ${port}`));
-      return port;
-    }
-  }
-
-  // 3. Try remaining common ports not already probed
-  for (const port of FALLBACK_PROBE_ORDER) {
-    if (probePorts.includes(port)) continue;
-    const alive = await isPortResponding(port);
-    if (alive) {
-      console.log(pc.dim(`  Auto-detected target port ${port}`));
-      return port;
-    }
+  // Probe all candidate ports in parallel; prefer the earliest one in priority order.
+  const extraPorts = FALLBACK_PROBE_ORDER.filter((p) => !probePorts.includes(p));
+  const orderedCandidates = [...probePorts, ...extraPorts];
+  const probeResults = await Promise.all(
+    orderedCandidates.map(async (port) => ({ port, alive: await isPortResponding(port) })),
+  );
+  const found = probeResults.find((r) => r.alive);
+  if (found) {
+    console.log(pc.dim(`  Auto-detected target port ${found.port}`));
+    return found.port;
   }
 
   // 4. Nothing responding — fall back to framework default
